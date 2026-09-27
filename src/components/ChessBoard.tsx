@@ -91,38 +91,55 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
     
     // Highlight valid moves
     const isValidMove = validMoves.some(m => m.row === actualRow && m.col === actualCol);
-    
+
+    const pieceNames: Record<string, string> = {
+      p: 'pawn',
+      r: 'rook',
+      n: 'knight',
+      b: 'bishop',
+      q: 'queen',
+      k: 'king',
+    };
+    const squareCoord = `${String.fromCharCode(97 + actualCol)}${8 - actualRow}`;
+    const pieceDesc = piece
+      ? `${piece.color === 'w' ? 'white' : 'black'} ${pieceNames[piece.type] || piece.type}`
+      : 'empty';
+    const statusDesc = isSelected ? ', selected' : isValidMove ? ', valid move target' : '';
+    const ariaLabel = `${squareCoord}, ${pieceDesc}${statusDesc}`;
+
     return (
-      <div
+      <button
         key={`${row}-${col}`}
-        className="aspect-square flex items-center justify-center cursor-pointer hover:brightness-110 transition-all relative"
+        type="button"
+        aria-label={ariaLabel}
+        className="aspect-square flex items-center justify-center cursor-pointer hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:z-20 transition-all relative"
         style={{ backgroundColor: bgColor }}
         onClick={() => handleSquareClick(row, col)}
       >
         {piece && (
-          <div className="z-10 transition-transform hover:scale-110">
+          <div className="z-10 transition-transform hover:scale-110 pointer-events-none">
             <ChessPiece type={piece.type} color={piece.color} size={50} />
           </div>
         )}
         {/* Valid move indicator */}
         {isValidMove && !piece && (
-          <div className="absolute w-1/3 h-1/3 rounded-full bg-black/30" />
+          <div className="absolute w-1/3 h-1/3 rounded-full bg-black/30 pointer-events-none" />
         )}
         {/* Capture indicator */}
         {isValidMove && piece && (
-          <div className="absolute inset-1 rounded-full border-4 border-black/30" />
+          <div className="absolute inset-1 rounded-full border-4 border-black/30 pointer-events-none" />
         )}
         {settings.showCoordinates && row === 7 && (
-          <span className="absolute bottom-1 right-1 text-xs font-bold opacity-50">
+          <span className="absolute bottom-1 right-1 text-xs font-bold opacity-50 pointer-events-none">
             {String.fromCharCode(97 + actualCol)}
           </span>
         )}
         {settings.showCoordinates && col === 0 && (
-          <span className="absolute top-1 left-1 text-xs font-bold opacity-50">
+          <span className="absolute top-1 left-1 text-xs font-bold opacity-50 pointer-events-none">
             {8 - actualRow}
           </span>
         )}
-      </div>
+      </button>
     );
   };
 
