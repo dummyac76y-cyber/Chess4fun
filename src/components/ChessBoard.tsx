@@ -117,25 +117,25 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
         onClick={() => handleSquareClick(row, col)}
       >
         {piece && (
-          <div className="z-10 transition-transform hover:scale-110 pointer-events-none">
+          <div className="z-10 transition-transform hover:scale-110">
             <ChessPiece type={piece.type} color={piece.color} size={50} />
           </div>
         )}
         {/* Valid move indicator */}
         {isValidMove && !piece && (
-          <div className="absolute w-1/3 h-1/3 rounded-full bg-black/30 pointer-events-none" />
+          <div className="absolute w-1/3 h-1/3 rounded-full bg-black/30" />
         )}
         {/* Capture indicator */}
         {isValidMove && piece && (
-          <div className="absolute inset-1 rounded-full border-4 border-black/30 pointer-events-none" />
+          <div className="absolute inset-1 rounded-full border-4 border-black/30" />
         )}
         {settings.showCoordinates && row === 7 && (
-          <span className="absolute bottom-1 right-1 text-xs font-bold opacity-50 pointer-events-none">
+          <span className="absolute bottom-1 right-1 text-xs font-bold opacity-50">
             {String.fromCharCode(97 + actualCol)}
           </span>
         )}
         {settings.showCoordinates && col === 0 && (
-          <span className="absolute top-1 left-1 text-xs font-bold opacity-50 pointer-events-none">
+          <span className="absolute top-1 left-1 text-xs font-bold opacity-50">
             {8 - actualRow}
           </span>
         )}
