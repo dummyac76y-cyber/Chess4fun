@@ -60,7 +60,7 @@ export default function App() {
   const [settings, setSettings] = useState<GameSettings>({
     soundEnabled: true,
     showCoordinates: true,
-    autoFlipBoard: false,
+    autoFlipBoard: true,
     showMoveQuality: true,
     boardTheme: 'modern',
   });
