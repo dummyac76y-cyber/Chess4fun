@@ -12,7 +12,7 @@ interface ChessBoardProps {
 
 export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardProps) {
   const board = game.board();
-  const flipped = settings.autoFlipBoard ? playerColor === 'black' : false;
+  const flipped = settings.autoFlipBoard && playerColor === 'black';
   const [selectedSquare, setSelectedSquare] = useState<{ row: number; col: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ row: number; col: number }[]>([]);
 
