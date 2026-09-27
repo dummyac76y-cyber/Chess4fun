@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Chess } from 'chess.js';
 import { GameSettings } from '../App';
+import { ChessPiece } from './ChessPiece';
 
 interface ChessBoardProps {
   game: Chess;
@@ -7,8 +9,6 @@ interface ChessBoardProps {
   onMove: (from: string, to: string, promotion?: string) => boolean;
   settings: GameSettings;
 }
-
-import { useState } from 'react';
 
 export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardProps) {
   const board = game.board();
@@ -92,8 +92,6 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
     // Highlight valid moves
     const isValidMove = validMoves.some(m => m.row === actualRow && m.col === actualCol);
     
-    const pieceUnicode = piece ? getPieceUnicode(piece) : '';
-    
     return (
       <div
         key={`${row}-${col}`}
@@ -101,10 +99,10 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
         style={{ backgroundColor: bgColor }}
         onClick={() => handleSquareClick(row, col)}
       >
-        {pieceUnicode && (
-          <span className="text-4xl sm:text-5xl md:text-6xl select-none drop-shadow-lg z-10">
-            {pieceUnicode}
-          </span>
+        {piece && (
+          <div className="z-10 transition-transform hover:scale-110">
+            <ChessPiece type={piece.type} color={piece.color} size={50} />
+          </div>
         )}
         {/* Valid move indicator */}
         {isValidMove && !piece && (
@@ -146,12 +144,4 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
       </div>
     </div>
   );
-}
-
-function getPieceUnicode(piece: any): string {
-  const pieces: Record<string, Record<string, string>> = {
-    w: { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' },
-    b: { p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚' },
-  };
-  return pieces[piece.color][piece.type] || '';
 }

@@ -246,36 +246,45 @@ export default function App() {
   // Matchmaking Screen
   if (screen === 'matchmaking') {
     return (
-      <MatchmakingQueue
-        stats={stats}
-        onMatchFound={(opponentColor: 'white' | 'black') => {
-          startGame('online', 'medium', '10min');
-          setPlayerColor(opponentColor);
-        }}
-        onCancel={() => setScreen('menu')}
-      />
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <MatchmakingQueue
+          stats={stats}
+          onMatchFound={(opponentColor: 'white' | 'black') => {
+            startGame('online', 'medium', '10min');
+            setPlayerColor(opponentColor);
+          }}
+          onCancel={() => setScreen('menu')}
+        />
+      </div>
     );
   }
 
   // Settings Screen
   if (screen === 'settings') {
     return (
-      <Settings
-        settings={settings}
-        onSettingsChange={setSettings}
-        onBack={() => setScreen('menu')}
-      />
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <Settings
+          settings={settings}
+          onSettingsChange={setSettings}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
     );
   }
 
   // Stats Screen
   if (screen === 'stats') {
     return (
-      <PointsSystem
-        stats={stats}
-        onBack={() => setScreen('menu')}
-        onReset={resetStats}
-      />
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <PointsSystem
+          stats={stats}
+          onBack={() => setScreen('menu')}
+          onReset={resetStats}
+        />
+      </div>
     );
   }
 
