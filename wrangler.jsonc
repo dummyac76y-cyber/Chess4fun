@@ -8,5 +8,8 @@
     "binding": "ASSETS",
     "html_handling": "single-page-app",
     "not_found_handling": "single-page-app"
+  },
+  "build": {
+    "command": "npm run build"
   }
 }
