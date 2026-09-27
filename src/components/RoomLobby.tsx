@@ -16,24 +16,55 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
   const handleCreate = async () => {
     setLoading(true);
     setError('');
-    try {
-      const code = generateAccessCode();
-      const { data, error: insertError } = await supabase
-        .from('chess_private_rooms')
-        .insert({
-          access_code: code,
-          status: 'waiting',
-          host_color: hostColor,
-        })
-        .select()
-        .single();
+    let attempts = 0;
+    let createdRoom: PrivateRoom | null = null;
+    let lastError: any = null;
 
-      if (insertError) throw insertError;
-      if (data) {
-        onRoomJoined(data as PrivateRoom, true, hostColor);
+    const initialFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+    while (attempts < 5 && !createdRoom) {
+      attempts++;
+      const code = generateAccessCode();
+      try {
+        const { data, error: insertError } = await supabase
+          .from('chess_private_rooms')
+          .insert({
+            access_code: code,
+            fen: initialFen,
+            move_history: '',
+            status: 'waiting',
+            host_color: hostColor,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          lastError = insertError;
+          if (insertError.code === '23505' || insertError.message?.includes('unique')) {
+            continue;
+          }
+          throw insertError;
+        }
+
+        if (data) {
+          createdRoom = data as PrivateRoom;
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.error(`Error creating private room attempt ${attempts}:`, err);
+        if (err?.code !== '23505' && !err?.message?.includes('unique')) {
+          break;
+        }
       }
-    } catch (err: any) {
-      setError('Could not create room. Please try again.');
+    }
+
+    if (createdRoom) {
+      onRoomJoined(createdRoom, true, hostColor);
+    } else {
+      console.error('Failed to create room after attempts:', lastError);
+      const msg = lastError?.message || 'Could not create room. Please try again.';
+      setError(msg);
       setLoading(false);
     }
   };
@@ -54,7 +85,10 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
         .eq('status', 'waiting')
         .maybeSingle();
 
-      if (queryError) throw queryError;
+      if (queryError) {
+        console.error('Error fetching room:', queryError);
+        throw queryError;
+      }
       if (!room) {
         setError('No waiting room found with that code. Check the code and try again.');
         setLoading(false);
@@ -69,12 +103,16 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
         .select()
         .single();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error joining room:', updateError);
+        throw updateError;
+      }
       if (updated) {
         onRoomJoined(updated as PrivateRoom, false, myColor);
       }
     } catch (err: any) {
-      setError('Could not join room. Please try again.');
+      console.error('Failed to join room:', err);
+      setError(err?.message || 'Could not join room. Please try again.');
       setLoading(false);
     }
   };

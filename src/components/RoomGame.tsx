@@ -35,7 +35,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       setMoveHistory(room.move_history ? room.move_history.split(',') : []);
     }
     lastFenRef.current = room.fen;
-  }, [room.id]);
+  }, [room.id, room.status, room.fen, room.move_history]);
 
   // Realtime subscription for move updates
   useEffect(() => {
@@ -67,22 +67,33 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     };
   }, [room.id]);
 
-  // Host waiting detection: poll once on mount if waiting
+  // Polling fallback to ensure state (status & board FEN) syncs reliably across devices
   useEffect(() => {
-    if (room.status !== 'waiting') return;
-    const poll = setInterval(async () => {
-      const { data } = await supabase
-        .from('chess_private_rooms')
-        .select('status')
-        .eq('id', room.id)
-        .maybeSingle();
-      if (data && data.status === 'active') {
-        setRoomStatus('active');
-        clearInterval(poll);
+    const interval = setInterval(async () => {
+      try {
+        const { data: latest, error } = await supabase
+          .from('chess_private_rooms')
+          .select('status, fen, move_history')
+          .eq('id', room.id)
+          .maybeSingle();
+
+        if (!error && latest) {
+          if (latest.status !== roomStatus) {
+            setRoomStatus(latest.status as 'waiting' | 'active' | 'finished');
+          }
+          if (latest.fen && latest.fen !== lastFenRef.current) {
+            lastFenRef.current = latest.fen;
+            setGame(new Chess(latest.fen));
+            setMoveHistory(latest.move_history ? latest.move_history.split(',') : []);
+          }
+        }
+      } catch (err) {
+        console.error('Room state polling error:', err);
       }
     }, 2000);
-    return () => clearInterval(poll);
-  }, [room.id, room.status]);
+
+    return () => clearInterval(interval);
+  }, [room.id, roomStatus]);
 
   const handleMove = useCallback((from: string, to: string, promotion?: string) => {
     // Only allow move if it's my turn and game is active
