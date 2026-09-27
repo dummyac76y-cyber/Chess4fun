@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { ChessBoard } from './components/ChessBoard';
 import { GameInfo } from './components/GameInfo';
@@ -11,6 +11,10 @@ import { LiquidGlassBackground } from './components/LiquidGlassBackground';
 import { GameMenu } from './components/GameMenu';
 import { TimeControlSelect } from './components/TimeControlSelect';
 import { DifficultySelect } from './components/DifficultySelect';
+import { RoomLobby } from './components/RoomLobby';
+import { RoomGame } from './components/RoomGame';
+import { Leaderboard } from './components/Leaderboard';
+import { PrivateRoom, getOrCreatePlayerId, getPlayerName, setPlayerName, fetchPlayerStats, upsertPlayerStats } from './lib/supabase';
 
 export type GameMode = 'bot' | 'pvp' | 'online';
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -34,8 +38,20 @@ export interface GameSettings {
   boardTheme: 'classic' | 'modern' | 'wood' | 'marble';
 }
 
+const DEFAULT_STATS: PlayerStats = {
+  points: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  gamesPlayed: 0,
+  currentStreak: 0,
+  bestStreak: 0,
+};
+
 export default function App() {
-  const [screen, setScreen] = useState<'menu' | 'game' | 'settings' | 'stats' | 'matchmaking' | 'timeControl' | 'difficulty'>('menu');
+  const [screen, setScreen] = useState<'menu' | 'game' | 'settings' | 'stats' | 'matchmaking' | 'timeControl' | 'difficulty' | 'roomLobby' | 'roomGame' | 'leaderboard'>('menu');
+  const [activeRoom, setActiveRoom] = useState<PrivateRoom | null>(null);
+  const [isRoomHost, setIsRoomHost] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>('bot');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [timeControl, setTimeControl] = useState<TimeControl>('10min');
@@ -50,24 +66,50 @@ export default function App() {
   });
   const [stats, setStats] = useState<PlayerStats>(() => {
     const saved = localStorage.getItem('chessStats');
-    return saved ? JSON.parse(saved) : {
-      points: 0,
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      gamesPlayed: 0,
-      currentStreak: 0,
-      bestStreak: 0,
-    };
+    return saved ? JSON.parse(saved) : DEFAULT_STATS;
   });
+  const [playerName, setPlayerNameState] = useState<string>(getPlayerName());
+  const [statsLoaded, setStatsLoaded] = useState(false);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const playerIdRef = useRef(getOrCreatePlayerId());
 
-  // Save stats to localStorage
+  // Load stats from Supabase on mount
   useEffect(() => {
+    const playerId = playerIdRef.current;
+    fetchPlayerStats(playerId).then((record) => {
+      if (record) {
+        const remoteStats: PlayerStats = {
+          points: record.points,
+          wins: record.wins,
+          losses: record.losses,
+          draws: record.draws,
+          gamesPlayed: record.games_played,
+          currentStreak: record.current_streak,
+          bestStreak: record.best_streak,
+        };
+        setStats(remoteStats);
+        localStorage.setItem('chessStats', JSON.stringify(remoteStats));
+      }
+      setStatsLoaded(true);
+    });
+  }, []);
+
+  // Sync stats to Supabase whenever they change (after initial load)
+  useEffect(() => {
+    if (!statsLoaded) return;
     localStorage.setItem('chessStats', JSON.stringify(stats));
-  }, [stats]);
+    upsertPlayerStats(playerIdRef.current, playerName, {
+      points: stats.points,
+      wins: stats.wins,
+      losses: stats.losses,
+      draws: stats.draws,
+      games_played: stats.gamesPlayed,
+      current_streak: stats.currentStreak,
+      best_streak: stats.bestStreak,
+    });
+  }, [stats, statsLoaded, playerName]);
 
   // Start new game
   const startGame = useCallback((mode: GameMode, diff?: Difficulty, time?: TimeControl) => {
@@ -103,7 +145,6 @@ export default function App() {
   const makeBotMove = useCallback((currentGame: Chess) => {
     const moves = currentGame.moves({ verbose: true });
     if (moves.length > 0) {
-      // Simple bot: pick a random move (could be improved with difficulty levels)
       const randomMove = moves[Math.floor(Math.random() * moves.length)];
       currentGame.move(randomMove);
       setGame(new Chess(currentGame.fen()));
@@ -121,13 +162,11 @@ export default function App() {
         setGame(new Chess(gameCopy.fen()));
         setMoveHistory(prev => [...prev, move.san]);
         
-        // Play sound
         if (settings.soundEnabled) {
           const audio = new Audio('/move-sound.mp3');
           audio.play().catch(() => {});
         }
         
-        // Bot move after player move (if playing vs bot)
         if (gameMode === 'bot' && !gameCopy.isGameOver()) {
           setTimeout(() => {
             makeBotMove(gameCopy);
@@ -158,7 +197,6 @@ export default function App() {
         result = 'draw';
       }
       
-      // Update stats
       setStats(prev => {
         const newStats = { ...prev };
         newStats.gamesPlayed++;
@@ -183,7 +221,6 @@ export default function App() {
 
   // Surrender handler
   const handleSurrender = useCallback(() => {
-    // Update stats - count as a loss
     setStats(prev => {
       const newStats = { ...prev };
       newStats.gamesPlayed++;
@@ -191,25 +228,22 @@ export default function App() {
       newStats.currentStreak = 0;
       return newStats;
     });
-    // Go back to menu
     setScreen('menu');
   }, []);
 
   // Reset stats
   const resetStats = useCallback(() => {
     if (confirm('Are you sure you want to reset all stats?')) {
-      const newStats = {
-        points: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        gamesPlayed: 0,
-        currentStreak: 0,
-        bestStreak: 0,
-      };
-      setStats(newStats);
-      localStorage.setItem('chessStats', JSON.stringify(newStats));
+      setStats(DEFAULT_STATS);
+      localStorage.setItem('chessStats', JSON.stringify(DEFAULT_STATS));
     }
+  }, []);
+
+  // Update player name
+  const handleNameChange = useCallback((name: string) => {
+    const trimmed = name.trim().slice(0, 20) || 'Anonymous';
+    setPlayerName(trimmed);
+    setPlayerName(trimmed);
   }, []);
 
   // Menu Screen
@@ -243,22 +277,35 @@ export default function App() {
               </button>
 
               <button
+                onClick={() => setScreen('roomLobby')}
+                className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:from-emerald-500/40 hover:to-teal-500/40 transition-all shadow-lg"
+              >
+                Private Room
+              </button>
+
+              <button
                 onClick={startMatchmaking}
                 className="w-full py-4 px-6 bg-gradient-to-r from-purple-500/30 to-blue-500/30 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:from-purple-500/40 hover:to-blue-500/40 transition-all shadow-lg"
               >
                 Find Online Match
               </button>
 
-              <div className="grid grid-cols-2 gap-3 pt-3">
+              <div className="grid grid-cols-3 gap-3 pt-3">
                 <button
                   onClick={() => setScreen('stats')}
-                  className="py-3 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all"
+                  className="py-3 px-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all text-sm"
                 >
                   Statistics
                 </button>
                 <button
+                  onClick={() => setScreen('leaderboard')}
+                  className="py-3 px-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all text-sm"
+                >
+                  Leaderboard
+                </button>
+                <button
                   onClick={() => setScreen('settings')}
-                  className="py-3 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all"
+                  className="py-3 px-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all text-sm"
                 >
                   Settings
                 </button>
@@ -267,7 +314,7 @@ export default function App() {
 
             <div className="text-center pt-4">
               <p className="text-white/60 text-sm">
-                Points: {stats.points} | Rank: {Math.floor(stats.points / 100)}
+                {playerName} — Points: {stats.points} | Rank: {Math.floor(stats.points / 100)}
               </p>
             </div>
           </div>
@@ -288,6 +335,56 @@ export default function App() {
             setPlayerColor(opponentColor);
           }}
           onCancel={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
+  // Private Room Lobby Screen
+  if (screen === 'roomLobby') {
+    return (
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <RoomLobby
+          onRoomJoined={(room, host, color) => {
+            setActiveRoom(room);
+            setIsRoomHost(host);
+            setPlayerColor(color);
+            setScreen('roomGame');
+          }}
+          onBack={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
+  // Private Room Game Screen
+  if (screen === 'roomGame' && activeRoom) {
+    return (
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <RoomGame
+          room={activeRoom}
+          isHost={isRoomHost}
+          myColor={playerColor}
+          settings={settings}
+          onLeave={() => {
+            setActiveRoom(null);
+            setScreen('menu');
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Leaderboard Screen
+  if (screen === 'leaderboard') {
+    return (
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <Leaderboard
+          currentPlayerId={playerIdRef.current}
+          onBack={() => setScreen('menu')}
         />
       </div>
     );
@@ -328,6 +425,8 @@ export default function App() {
           settings={settings}
           onSettingsChange={setSettings}
           onBack={() => setScreen('menu')}
+          playerName={playerName}
+          onNameChange={handleNameChange}
         />
       </div>
     );
@@ -340,6 +439,7 @@ export default function App() {
         <LiquidGlassBackground />
         <PointsSystem
           stats={stats}
+          playerName={playerName}
           onBack={() => setScreen('menu')}
           onReset={resetStats}
         />

@@ -4,9 +4,10 @@ interface PointsSystemProps {
   stats: PlayerStats;
   onBack: () => void;
   onReset: () => void;
+  playerName: string;
 }
 
-export function PointsSystem({ stats, onBack, onReset }: PointsSystemProps) {
+export function PointsSystem({ stats, onBack, onReset, playerName }: PointsSystemProps) {
   const winRate = stats.gamesPlayed > 0 ? ((stats.wins / stats.gamesPlayed) * 100).toFixed(1) : '0.0';
 
   return (
@@ -21,7 +22,8 @@ export function PointsSystem({ stats, onBack, onReset }: PointsSystemProps) {
               border: '1px solid rgba(255,255,255,0.15)',
             }}
           >
-            <h2 className="text-3xl font-bold text-white text-center mb-6">Player Statistics</h2>
+            <h2 className="text-3xl font-bold text-white text-center mb-2">Player Statistics</h2>
+            <p className="text-white/50 text-center text-sm mb-6">{playerName}</p>
 
             <div className="text-center mb-6">
               <div className="text-5xl font-bold text-white mb-2">{stats.points}</div>

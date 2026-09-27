@@ -4,9 +4,11 @@ interface SettingsProps {
   settings: GameSettings;
   onSettingsChange: (settings: GameSettings) => void;
   onBack: () => void;
+  playerName: string;
+  onNameChange: (name: string) => void;
 }
 
-export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) {
+export function Settings({ settings, onSettingsChange, onBack, playerName, onNameChange }: SettingsProps) {
   return (
     <div className="relative min-h-screen">
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
@@ -22,6 +24,18 @@ export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) 
             <h2 className="text-3xl font-bold text-white text-center">Settings</h2>
 
             <div className="space-y-4">
+              <div>
+                <span className="text-white block mb-2">Player Name</span>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => onNameChange(e.target.value)}
+                  maxLength={20}
+                  placeholder="Anonymous"
+                  className="w-full py-3 px-4 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-emerald-400/60 placeholder:text-white/30"
+                />
+                <p className="text-white/40 text-xs mt-1">This name appears on the leaderboard</p>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-white">Sound Effects</span>
                 <button
