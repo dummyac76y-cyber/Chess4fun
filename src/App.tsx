@@ -83,6 +83,18 @@ export default function App() {
     setScreen('matchmaking');
   }, []);
 
+  // Bot move logic
+  const makeBotMove = useCallback((currentGame: Chess) => {
+    const moves = currentGame.moves({ verbose: true });
+    if (moves.length > 0) {
+      // Simple bot: pick a random move (could be improved with difficulty levels)
+      const randomMove = moves[Math.floor(Math.random() * moves.length)];
+      currentGame.move(randomMove);
+      setGame(new Chess(currentGame.fen()));
+      setMoveHistory(prev => [...prev, randomMove.san]);
+    }
+  }, []);
+
   // Handle move
   const handleMove = useCallback((from: string, to: string, promotion?: string) => {
     const gameCopy = new Chess(game.fen());
@@ -90,13 +102,20 @@ export default function App() {
     try {
       const move = gameCopy.move({ from, to, promotion: promotion || 'q' });
       if (move) {
-        setGame(gameCopy);
+        setGame(new Chess(gameCopy.fen()));
         setMoveHistory(prev => [...prev, move.san]);
         
         // Play sound
         if (settings.soundEnabled) {
           const audio = new Audio('/move-sound.mp3');
           audio.play().catch(() => {});
+        }
+        
+        // Bot move after player move (if playing vs bot)
+        if (gameMode === 'bot' && !gameCopy.isGameOver()) {
+          setTimeout(() => {
+            makeBotMove(gameCopy);
+          }, 500);
         }
         
         return true;
@@ -106,7 +125,7 @@ export default function App() {
     }
     
     return false;
-  }, [game, settings.soundEnabled]);
+  }, [game, settings.soundEnabled, gameMode, makeBotMove]);
 
   // Check game over
   useEffect(() => {
