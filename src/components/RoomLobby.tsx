@@ -20,7 +20,8 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
       const room = await createPrivateRoom(hostColor);
       onRoomJoined(room, true, hostColor);
     } catch (err: any) {
-      setError('Could not create room. Please try again.');
+      console.error('RoomLobby handleCreate error:', err);
+      setError(err?.message || 'Could not create room. Please try again.');
       setLoading(false);
     }
   };
@@ -34,14 +35,10 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
     setError('');
     try {
       const result = await joinPrivateRoom(joinCode);
-      if (!result) {
-        setError('No waiting room found with that code. Check the code and try again.');
-        setLoading(false);
-        return;
-      }
       onRoomJoined(result.room, false, result.myColor);
     } catch (err: any) {
-      setError('Could not join room. Please try again.');
+      console.error('RoomLobby handleJoin error:', err);
+      setError(err?.message || 'Could not join room. Please check code and try again.');
       setLoading(false);
     }
   };

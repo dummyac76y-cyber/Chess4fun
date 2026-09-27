@@ -41,6 +41,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
   useEffect(() => {
     let supabaseChannel: any = null;
     if (isSupabaseConfigured() && !room.is_local) {
+      console.log(`[RoomGame Realtime] Subscribing to room-${room.id}`);
       supabaseChannel = supabase
         .channel(`room-${room.id}`)
         .on(
@@ -48,6 +49,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
           { event: 'UPDATE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
           (payload: any) => {
             const updated = payload.new as PrivateRoom;
+            console.log('[RoomGame Realtime Update]', updated);
             setRoomStatus(updated.status);
             lastFenRef.current = updated.fen;
             const incomingGame = new Chess(updated.fen);
@@ -59,10 +61,13 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
           'postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
           () => {
+            console.log('[RoomGame Realtime Delete] Room was deleted by host/opponent');
             setOpponentLeft(true);
           }
         )
-        .subscribe();
+        .subscribe((status: string, err?: any) => {
+          console.log(`[RoomGame Realtime Status] Subscription status: ${status}`, err || '');
+        });
     }
 
     let broadcastChannel: BroadcastChannel | null = null;
@@ -92,33 +97,51 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     };
   }, [room.id, room.is_local]);
 
-  // Host waiting detection: poll periodically if waiting
+  // Host/Client periodic polling fallback to guarantee status & move sync even if websocket drops
   useEffect(() => {
-    if (roomStatus !== 'waiting') return;
+    const pollInterval = roomStatus === 'waiting' ? 1000 : 3000;
     const poll = setInterval(async () => {
       if (isSupabaseConfigured() && !room.is_local) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('chess_private_rooms')
-          .select('status')
+          .select('status, fen, move_history')
           .eq('id', room.id)
           .maybeSingle();
-        if (data && data.status === 'active') {
-          setRoomStatus('active');
-          clearInterval(poll);
+
+        if (error) {
+          console.error('[RoomGame Polling Error]', error);
           return;
+        }
+
+        if (data) {
+          if (data.status !== roomStatus) {
+            setRoomStatus(data.status);
+          }
+          if (data.fen !== lastFenRef.current) {
+            lastFenRef.current = data.fen;
+            setGame(new Chess(data.fen));
+            setMoveHistory(data.move_history ? data.move_history.split(',') : []);
+          }
         }
       }
       try {
         const raw = localStorage.getItem('chess_local_private_rooms');
         if (raw) {
           const rooms = JSON.parse(raw);
-          if (rooms[room.id] && rooms[room.id].status === 'active') {
-            setRoomStatus('active');
-            clearInterval(poll);
+          if (rooms[room.id]) {
+            const localR = rooms[room.id];
+            if (localR.status !== roomStatus) {
+              setRoomStatus(localR.status);
+            }
+            if (localR.fen !== lastFenRef.current) {
+              lastFenRef.current = localR.fen;
+              setGame(new Chess(localR.fen));
+              setMoveHistory(localR.move_history ? localR.move_history.split(',') : []);
+            }
           }
         }
       } catch (e) {}
-    }, 1000);
+    }, pollInterval);
 
     return () => clearInterval(poll);
   }, [room.id, roomStatus, room.is_local]);
