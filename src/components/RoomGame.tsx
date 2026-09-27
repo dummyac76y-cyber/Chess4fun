@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
-import { supabase, PrivateRoom } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, updatePrivateRoom, deletePrivateRoom, PrivateRoom } from '../lib/supabase';
 import { ChessBoard } from './ChessBoard';
 import { Controls } from './Controls';
 import { GameInfo } from './GameInfo';
@@ -37,52 +37,91 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     lastFenRef.current = room.fen;
   }, [room.id]);
 
-  // Realtime subscription for move updates
+  // Realtime subscription & BroadcastChannel setup for move updates
   useEffect(() => {
-    const channel = supabase
-      .channel(`room-${room.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
-        (payload: any) => {
-          const updated = payload.new as PrivateRoom;
-          setRoomStatus(updated.status);
-          lastFenRef.current = updated.fen;
-          const incomingGame = new Chess(updated.fen);
-          setGame(incomingGame);
-          setMoveHistory(updated.move_history ? updated.move_history.split(',') : []);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
-        () => {
+    let supabaseChannel: any = null;
+    if (isSupabaseConfigured() && !room.is_local) {
+      supabaseChannel = supabase
+        .channel(`room-${room.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
+          (payload: any) => {
+            const updated = payload.new as PrivateRoom;
+            setRoomStatus(updated.status);
+            lastFenRef.current = updated.fen;
+            const incomingGame = new Chess(updated.fen);
+            setGame(incomingGame);
+            setMoveHistory(updated.move_history ? updated.move_history.split(',') : []);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
+          () => {
+            setOpponentLeft(true);
+          }
+        )
+        .subscribe();
+    }
+
+    let broadcastChannel: BroadcastChannel | null = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      broadcastChannel = new BroadcastChannel(`room_channel_${room.id}`);
+      broadcastChannel.onmessage = (event) => {
+        const { type, room: updatedRoom } = event.data || {};
+        if (type === 'DELETE') {
           setOpponentLeft(true);
+        } else if (type === 'UPDATE' && updatedRoom) {
+          setRoomStatus(updatedRoom.status);
+          lastFenRef.current = updatedRoom.fen;
+          const incomingGame = new Chess(updatedRoom.fen);
+          setGame(incomingGame);
+          setMoveHistory(updatedRoom.move_history ? updatedRoom.move_history.split(',') : []);
         }
-      )
-      .subscribe();
+      };
+    }
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [room.id]);
-
-  // Host waiting detection: poll once on mount if waiting
-  useEffect(() => {
-    if (room.status !== 'waiting') return;
-    const poll = setInterval(async () => {
-      const { data } = await supabase
-        .from('chess_private_rooms')
-        .select('status')
-        .eq('id', room.id)
-        .maybeSingle();
-      if (data && data.status === 'active') {
-        setRoomStatus('active');
-        clearInterval(poll);
+      if (supabaseChannel) {
+        supabase.removeChannel(supabaseChannel);
       }
-    }, 2000);
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
+    };
+  }, [room.id, room.is_local]);
+
+  // Host waiting detection: poll periodically if waiting
+  useEffect(() => {
+    if (roomStatus !== 'waiting') return;
+    const poll = setInterval(async () => {
+      if (isSupabaseConfigured() && !room.is_local) {
+        const { data } = await supabase
+          .from('chess_private_rooms')
+          .select('status')
+          .eq('id', room.id)
+          .maybeSingle();
+        if (data && data.status === 'active') {
+          setRoomStatus('active');
+          clearInterval(poll);
+          return;
+        }
+      }
+      try {
+        const raw = localStorage.getItem('chess_local_private_rooms');
+        if (raw) {
+          const rooms = JSON.parse(raw);
+          if (rooms[room.id] && rooms[room.id].status === 'active') {
+            setRoomStatus('active');
+            clearInterval(poll);
+          }
+        }
+      } catch (e) {}
+    }, 1000);
+
     return () => clearInterval(poll);
-  }, [room.id, room.status]);
+  }, [room.id, roomStatus, room.is_local]);
 
   const handleMove = useCallback((from: string, to: string, promotion?: string) => {
     // Only allow move if it's my turn and game is active
@@ -104,18 +143,11 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
 
       const finalStatus = gameCopy.isGameOver() ? 'finished' : 'active';
 
-      supabase
-        .from('chess_private_rooms')
-        .update({
-          fen: newFen,
-          move_history: newHistory.join(','),
-          status: finalStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', room.id)
-        .then(({ error }) => {
-          if (error) console.error('Failed to sync move:', error);
-        });
+      updatePrivateRoom(room.id, {
+        fen: newFen,
+        move_history: newHistory.join(','),
+        status: finalStatus,
+      });
 
       return true;
     } catch (e) {
@@ -125,8 +157,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
   }, [game, roomStatus, myColor, moveHistory, room.id]);
 
   const handleLeave = useCallback(() => {
-    // Delete the room so the opponent is notified
-    supabase.from('chess_private_rooms').delete().eq('id', room.id).then(() => {});
+    deletePrivateRoom(room.id);
     onLeave();
   }, [room.id, onLeave]);
 
@@ -140,15 +171,10 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     setGame(new Chess(newFen));
     setMoveHistory(newHistory);
 
-    supabase
-      .from('chess_private_rooms')
-      .update({
-        fen: newFen,
-        move_history: newHistory.join(','),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', room.id)
-      .then(() => {});
+    updatePrivateRoom(room.id, {
+      fen: newFen,
+      move_history: newHistory.join(','),
+    });
   }, [game, moveHistory, room.id]);
 
   // Waiting screen for host
