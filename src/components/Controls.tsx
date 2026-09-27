@@ -5,9 +5,11 @@ interface ControlsProps {
   onNewGame: () => void;
   onFlipBoard: () => void;
   onUndo: () => void;
+  onSurrender: () => void;
+  onOpenMenu: () => void;
 }
 
-export function Controls({ game, onNewGame, onFlipBoard, onUndo }: ControlsProps) {
+export function Controls({ game, onNewGame, onFlipBoard, onUndo, onSurrender, onOpenMenu }: ControlsProps) {
   return (
     <div 
       className="rounded-2xl p-4"
@@ -17,7 +19,14 @@ export function Controls({ game, onNewGame, onFlipBoard, onUndo }: ControlsProps
         border: '1px solid rgba(255,255,255,0.15)',
       }}
     >
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
+        <button
+          onClick={onOpenMenu}
+          className="py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
+        >
+          Menu
+        </button>
+        
         <button
           onClick={onUndo}
           disabled={game.history().length === 0}
@@ -30,14 +39,14 @@ export function Controls({ game, onNewGame, onFlipBoard, onUndo }: ControlsProps
           onClick={onFlipBoard}
           className="py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
         >
-          Flip Board
+          Flip
         </button>
         
         <button
-          onClick={onNewGame}
-          className="py-3 px-4 bg-gradient-to-r from-purple-500/30 to-blue-500/30 hover:from-purple-500/40 hover:to-blue-500/40 border border-white/20 rounded-xl text-white font-medium transition-all"
+          onClick={onSurrender}
+          className="py-3 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-white font-medium transition-all"
         >
-          New Game
+          Surrender
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { Analysis } from './components/Analysis';
 import { MatchmakingQueue } from './components/MatchmakingQueue';
 import { PointsSystem } from './components/PointsSystem';
 import { LiquidGlassBackground } from './components/LiquidGlassBackground';
+import { GameMenu } from './components/GameMenu';
 
 export type GameMode = 'bot' | 'pvp' | 'online';
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -59,6 +60,7 @@ export default function App() {
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<any>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Save stats to localStorage
   useEffect(() => {
@@ -164,6 +166,20 @@ export default function App() {
       });
     }
   }, [game, playerColor, difficulty]);
+
+  // Surrender handler
+  const handleSurrender = useCallback(() => {
+    // Update stats - count as a loss
+    setStats(prev => {
+      const newStats = { ...prev };
+      newStats.gamesPlayed++;
+      newStats.losses++;
+      newStats.currentStreak = 0;
+      return newStats;
+    });
+    // Go back to menu
+    setScreen('menu');
+  }, []);
 
   // Reset stats
   const resetStats = useCallback(() => {
@@ -314,6 +330,8 @@ export default function App() {
                   game.undo();
                   setGame(new Chess(game.fen()));
                 }}
+                onSurrender={handleSurrender}
+                onOpenMenu={() => setIsMenuOpen(true)}
               />
             </div>
 
@@ -336,6 +354,21 @@ export default function App() {
           </div>
         </div>
       </div>
+      
+      {/* In-game Menu */}
+      <GameMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        onSurrender={handleSurrender}
+        onNewGame={() => {
+          setIsMenuOpen(false);
+          setScreen('menu');
+        }}
+        onBackToMenu={() => {
+          setIsMenuOpen(false);
+          setScreen('menu');
+        }}
+      />
     </div>
   );
 }
