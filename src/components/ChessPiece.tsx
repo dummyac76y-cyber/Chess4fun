@@ -1,12 +1,10 @@
-import React from 'react';
-
 interface ChessPieceProps {
   type: 'p' | 'r' | 'n' | 'b' | 'q' | 'k';
   color: 'w' | 'b';
   size?: number;
 }
 
-export const ChessPiece = React.memo(function ChessPiece({ type, color, size = 60 }: ChessPieceProps) {
+export function ChessPiece({ type, color, size = 60 }: ChessPieceProps) {
   const isWhite = color === 'w';
   
   // Professional chess piece colors
@@ -85,4 +83,4 @@ export const ChessPiece = React.memo(function ChessPiece({ type, color, size = 6
       {pieces[type]}
     </svg>
   );
-});
+}
