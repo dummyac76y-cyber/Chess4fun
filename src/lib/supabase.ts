@@ -74,7 +74,7 @@ export async function fetchPlayerStats(playerId: string): Promise<PlayerStatsRec
     .eq('player_id', playerId)
     .maybeSingle();
   if (error) {
-    console.error('Failed to fetch player stats:', error);
+    console.error('[Supabase Stats Error] Failed to fetch player stats:', error);
     return null;
   }
   return data as PlayerStatsRecord | null;
@@ -116,7 +116,7 @@ export async function upsertPlayerStats(
       .eq('player_id', playerId)
       .select()
       .single();
-    if (error) console.error('Failed to update player stats:', error);
+    if (error) console.error('[Supabase Stats Error] Failed to update player stats:', error);
     return data as PlayerStatsRecord | null;
   } else {
     const { data, error } = await supabase
@@ -128,7 +128,7 @@ export async function upsertPlayerStats(
       })
       .select()
       .single();
-    if (error) console.error('Failed to insert player stats:', error);
+    if (error) console.error('[Supabase Stats Error] Failed to insert player stats:', error);
     return data as PlayerStatsRecord | null;
   }
 }
@@ -140,7 +140,7 @@ export async function fetchLeaderboard(limit: number = 20): Promise<PlayerStatsR
     .order('points', { ascending: false })
     .limit(limit);
   if (error) {
-    console.error('Failed to fetch leaderboard:', error);
+    console.error('[Supabase Leaderboard Error] Failed to fetch leaderboard:', error);
     return [];
   }
   return (data as PlayerStatsRecord[]) || [];
@@ -179,32 +179,43 @@ export function broadcastRoomUpdate(room: PrivateRoom, type: 'UPDATE' | 'DELETE'
 }
 
 export async function createPrivateRoom(hostColor: 'white' | 'black'): Promise<PrivateRoom> {
-  const code = generateAccessCode();
+  const code = generateAccessCode().trim().toUpperCase();
   const initialFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase
-        .from('chess_private_rooms')
-        .insert({
-          access_code: code,
-          status: 'waiting',
-          host_color: hostColor,
-          fen: initialFen,
-          move_history: '',
-        })
-        .select()
-        .single();
+    console.log('[CreateRoom] Creating room in Supabase with code:', code);
+    const { data, error } = await supabase
+      .from('chess_private_rooms')
+      .insert({
+        access_code: code,
+        status: 'waiting',
+        host_color: hostColor,
+        fen: initialFen,
+        move_history: '',
+      })
+      .select()
+      .single();
 
-      if (!error && data) {
-        return data as PrivateRoom;
-      }
-    } catch (err) {
-      console.warn('Supabase create room failed, falling back to local mode:', err);
+    if (error) {
+      console.error('[CreateRoom Failure] Supabase error when creating room:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      throw new Error(`Failed to create room in database: ${error.message} (Code: ${error.code || 'UNKNOWN'})`);
     }
+
+    if (!data) {
+      console.error('[CreateRoom Failure] No data returned from Supabase room creation.');
+      throw new Error('Failed to create room: Backend returned empty response.');
+    }
+
+    console.log('[CreateRoom Success] Created room:', data.id, 'with code:', data.access_code);
+    return data as PrivateRoom;
   }
 
-  // Fallback local room creation
+  console.warn('[CreateRoom] Supabase environment variables not configured. Creating offline/local room.');
   const localRoom: PrivateRoom = {
     id: crypto.randomUUID(),
     access_code: code,
@@ -225,47 +236,89 @@ export async function createPrivateRoom(hostColor: 'white' | 'black'): Promise<P
   return localRoom;
 }
 
-export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom; myColor: 'white' | 'black' } | null> {
+export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom; myColor: 'white' | 'black' }> {
   const cleanCode = code.trim().toUpperCase();
 
-  if (isSupabaseConfigured()) {
-    try {
-      const { data: room, error: queryError } = await supabase
-        .from('chess_private_rooms')
-        .select('*')
-        .eq('access_code', cleanCode)
-        .eq('status', 'waiting')
-        .maybeSingle();
-
-      if (!queryError && room) {
-        const myColor = room.host_color === 'white' ? 'black' : 'white';
-        const { data: updated, error: updateError } = await supabase
-          .from('chess_private_rooms')
-          .update({ status: 'active', updated_at: new Date().toISOString() })
-          .eq('id', room.id)
-          .select()
-          .single();
-
-        if (!updateError && updated) {
-          return { room: updated as PrivateRoom, myColor };
-        }
-      }
-    } catch (err) {
-      console.warn('Supabase join room failed, trying local mode:', err);
-    }
+  if (!cleanCode) {
+    console.error('[JoinRoom Error] Empty room code provided.');
+    throw new Error('Please enter a valid access code.');
   }
 
-  // Local fallback
+  if (isSupabaseConfigured()) {
+    console.log('[JoinRoom] Searching Supabase for access code:', cleanCode);
+
+    // Case-insensitive / normalized lookup on access_code
+    const { data: room, error: queryError } = await supabase
+      .from('chess_private_rooms')
+      .select('*')
+      .ilike('access_code', cleanCode)
+      .maybeSingle();
+
+    if (queryError) {
+      console.error('[JoinRoom Failure] Database query error:', {
+        message: queryError.message,
+        code: queryError.code,
+        details: queryError.details,
+        hint: queryError.hint,
+      });
+      throw new Error(`Database error looking up room: ${queryError.message}`);
+    }
+
+    if (!room) {
+      console.warn(`[JoinRoom] Room not found in database for code: "${cleanCode}"`);
+      throw new Error(`Room with code "${cleanCode}" does not exist or has expired.`);
+    }
+
+    console.log(`[JoinRoom] Found room ID: ${room.id}, current status: ${room.status}`);
+
+    if (room.status === 'finished') {
+      throw new Error('This room game has already finished.');
+    }
+
+    const myColor = room.host_color === 'white' ? 'black' : 'white';
+
+    if (room.status === 'active') {
+      console.log('[JoinRoom] Room is already active. Rejoining game...');
+      return { room: room as PrivateRoom, myColor };
+    }
+
+    // Room status is 'waiting' -> transition to 'active'
+    const { data: updated, error: updateError } = await supabase
+      .from('chess_private_rooms')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', room.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[JoinRoom Failure] Error updating room status to active:', updateError);
+      throw new Error(`Failed to activate room: ${updateError.message}`);
+    }
+
+    if (!updated) {
+      console.error('[JoinRoom Failure] Room status update returned no data.');
+      throw new Error('Failed to join room: Server returned empty response on join.');
+    }
+
+    console.log('[JoinRoom Success] Joined room:', updated.id, 'as color:', myColor);
+    return { room: updated as PrivateRoom, myColor };
+  }
+
+  console.warn('[JoinRoom] Supabase environment variables not configured. Checking local storage rooms.');
   const rooms = getLocalRooms();
   const foundId = Object.keys(rooms).find(
-    (id) => rooms[id].access_code === cleanCode && rooms[id].status === 'waiting'
+    (id) => rooms[id].access_code.trim().toUpperCase() === cleanCode
   );
 
   if (!foundId) {
-    return null;
+    throw new Error(`Room with code "${cleanCode}" not found in local storage.`);
   }
 
   const room = rooms[foundId];
+  if (room.status === 'finished') {
+    throw new Error('This room game has already finished.');
+  }
+
   const myColor = room.host_color === 'white' ? 'black' : 'white';
   room.status = 'active';
   room.updated_at = new Date().toISOString();
@@ -295,12 +348,14 @@ export async function updatePrivateRoom(
         .select()
         .single();
 
-      if (!error && data) {
+      if (error) {
+        console.error('[UpdateRoom Error] Supabase update failed:', error);
+      } else if (data) {
         broadcastRoomUpdate(data as PrivateRoom, 'UPDATE');
         return data as PrivateRoom;
       }
     } catch (err) {
-      console.warn('Supabase update room failed:', err);
+      console.error('[UpdateRoom Error] Exception during Supabase room update:', err);
     }
   }
 
@@ -325,9 +380,12 @@ export async function deletePrivateRoom(roomId: string): Promise<void> {
 
   if (isSupabaseConfigured() && (!room || !room.is_local)) {
     try {
-      await supabase.from('chess_private_rooms').delete().eq('id', roomId);
+      const { error } = await supabase.from('chess_private_rooms').delete().eq('id', roomId);
+      if (error) {
+        console.error('[DeleteRoom Error] Supabase delete failed:', error);
+      }
     } catch (err) {
-      console.warn('Supabase delete room failed:', err);
+      console.error('[DeleteRoom Error] Exception during Supabase room deletion:', err);
     }
   }
 
