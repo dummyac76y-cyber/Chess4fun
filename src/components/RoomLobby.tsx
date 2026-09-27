@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase, generateAccessCode, PrivateRoom } from '../lib/supabase';
+import { createPrivateRoom, joinPrivateRoom, PrivateRoom } from '../lib/supabase';
 
 interface RoomLobbyProps {
   onRoomJoined: (room: PrivateRoom, isHost: boolean, myColor: 'white' | 'black') => void;
@@ -17,21 +17,8 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
     setLoading(true);
     setError('');
     try {
-      const code = generateAccessCode();
-      const { data, error: insertError } = await supabase
-        .from('chess_private_rooms')
-        .insert({
-          access_code: code,
-          status: 'waiting',
-          host_color: hostColor,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-      if (data) {
-        onRoomJoined(data as PrivateRoom, true, hostColor);
-      }
+      const room = await createPrivateRoom(hostColor);
+      onRoomJoined(room, true, hostColor);
     } catch (err: any) {
       setError('Could not create room. Please try again.');
       setLoading(false);
@@ -46,33 +33,13 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
     setLoading(true);
     setError('');
     try {
-      const code = joinCode.trim().toUpperCase();
-      const { data: room, error: queryError } = await supabase
-        .from('chess_private_rooms')
-        .select('*')
-        .eq('access_code', code)
-        .eq('status', 'waiting')
-        .maybeSingle();
-
-      if (queryError) throw queryError;
-      if (!room) {
+      const result = await joinPrivateRoom(joinCode);
+      if (!result) {
         setError('No waiting room found with that code. Check the code and try again.');
         setLoading(false);
         return;
       }
-
-      const myColor = room.host_color === 'white' ? 'black' : 'white';
-      const { data: updated, error: updateError } = await supabase
-        .from('chess_private_rooms')
-        .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', room.id)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-      if (updated) {
-        onRoomJoined(updated as PrivateRoom, false, myColor);
-      }
+      onRoomJoined(result.room, false, result.myColor);
     } catch (err: any) {
       setError('Could not join room. Please try again.');
       setLoading(false);
