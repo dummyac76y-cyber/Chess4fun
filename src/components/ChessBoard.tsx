@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Chess } from 'chess.js';
-import { GameSettings } from '../App';
+import { GameSettings, GameMode } from '../App';
 import { ChessPiece } from './ChessPiece';
 
 interface ChessBoardProps {
@@ -8,25 +8,37 @@ interface ChessBoardProps {
   playerColor: 'white' | 'black';
   onMove: (from: string, to: string, promotion?: string) => boolean;
   settings: GameSettings;
+  gameMode?: GameMode;
 }
 
-export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardProps) {
+export function ChessBoard({ game, playerColor, onMove, settings, gameMode = 'bot' }: ChessBoardProps) {
   const board = game.board();
-  const flipped = settings.autoFlipBoard ? playerColor === 'black' : false;
+  const isPlayerBlack = playerColor === 'black';
+  const flipped = settings.autoFlipBoard ? (gameMode === 'pvp' ? game.turn() === 'b' : isPlayerBlack) : isPlayerBlack;
   const [selectedSquare, setSelectedSquare] = useState<{ row: number; col: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ row: number; col: number }[]>([]);
-  
-  const handleSquareClick = (row: number, col: number) => {
+
+  const myColorChar = playerColor === 'white' ? 'w' : 'b';
+  const isSinglePlayerPerspective = gameMode === 'bot' || gameMode === 'online';
+
+  const canSelectPiece = useCallback((piece: { type: string; color: string } | null) => {
+    if (!piece) return false;
+    if (piece.color !== game.turn()) return false;
+    if (isSinglePlayerPerspective && piece.color !== myColorChar) return false;
+    return true;
+  }, [game, isSinglePlayerPerspective, myColorChar]);
+
+  const handleSquareClick = useCallback((row: number, col: number) => {
     const actualRow = flipped ? 7 - row : row;
     const actualCol = flipped ? 7 - col : col;
     const square = String.fromCharCode(97 + actualCol) + (8 - actualRow);
     const piece = board[actualRow][actualCol];
-    
+
     // If we have a selected piece
     if (selectedSquare) {
       // Check if clicked square is a valid move
       const isValidMove = validMoves.some(m => m.row === actualRow && m.col === actualCol);
-      
+
       if (isValidMove) {
         const fromSquare = String.fromCharCode(97 + selectedSquare.col) + (8 - selectedSquare.row);
         const success = onMove(fromSquare, square);
@@ -36,9 +48,9 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
           return;
         }
       }
-      
-      // If clicked on own piece, select it instead
-      if (piece && piece.color === game.turn()) {
+
+      // If clicked on piece player is allowed to select
+      if (piece && canSelectPiece(piece)) {
         setSelectedSquare({ row: actualRow, col: actualCol });
         const moves = game.moves({ square: square as any, verbose: true }) as any[];
         setValidMoves(moves.map((m: any) => {
@@ -48,15 +60,15 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
         }));
         return;
       }
-      
+
       // Deselect
       setSelectedSquare(null);
       setValidMoves([]);
       return;
     }
-    
+
     // Select a piece
-    if (piece && piece.color === game.turn()) {
+    if (piece && canSelectPiece(piece)) {
       setSelectedSquare({ row: actualRow, col: actualCol });
       const moves = game.moves({ square: square as any, verbose: true }) as any[];
       setValidMoves(moves.map((m: any) => {
@@ -65,33 +77,32 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
         return { row: toRow, col: toCol };
       }));
     }
-  };
+  }, [board, canSelectPiece, flipped, game, onMove, selectedSquare, validMoves]);
 
-  const renderSquare = (piece: any, row: number, col: number) => {
+  const themeColors = useMemo(() => ({
+    classic: { light: '#f0d9b5', dark: '#b58863' },
+    modern: { light: '#e8e8e8', dark: '#4a4a4a' },
+    wood: { light: '#deb887', dark: '#8b4513' },
+    marble: { light: '#f5f5f5', dark: '#696969' },
+  }), []);
+
+  const renderSquare = useCallback((piece: any, row: number, col: number) => {
     const actualRow = flipped ? 7 - row : row;
     const actualCol = flipped ? 7 - col : col;
     const isLight = (actualRow + actualCol) % 2 === 0;
-    
-    // Board theme colors
-    const themeColors = {
-      classic: { light: '#f0d9b5', dark: '#b58863' },
-      modern: { light: '#e8e8e8', dark: '#4a4a4a' },
-      wood: { light: '#deb887', dark: '#8b4513' },
-      marble: { light: '#f5f5f5', dark: '#696969' },
-    };
-    
+
     const colors = themeColors[settings.boardTheme];
     let bgColor = isLight ? colors.light : colors.dark;
-    
+
     // Highlight selected square
     const isSelected = selectedSquare && selectedSquare.row === actualRow && selectedSquare.col === actualCol;
     if (isSelected) {
       bgColor = '#7fc97f';
     }
-    
+
     // Highlight valid moves
     const isValidMove = validMoves.some(m => m.row === actualRow && m.col === actualCol);
-    
+
     return (
       <div
         key={`${row}-${col}`}
@@ -124,7 +135,7 @@ export function ChessBoard({ game, playerColor, onMove, settings }: ChessBoardPr
         )}
       </div>
     );
-  };
+  }, [flipped, themeColors, settings.boardTheme, settings.showCoordinates, selectedSquare, validMoves, handleSquareClick]);
 
   return (
     <div className="relative w-full max-w-[600px] mx-auto">

@@ -141,7 +141,7 @@ export default function App() {
     setScreen('matchmaking');
   }, []);
 
-  // Bot move logic
+  // Bot / Opponent move logic
   const makeBotMove = useCallback((currentGame: Chess) => {
     const moves = currentGame.moves({ verbose: true });
     if (moves.length > 0) {
@@ -152,35 +152,71 @@ export default function App() {
     }
   }, []);
 
+  const makeOnlineOpponentMove = useCallback((currentGame: Chess) => {
+    if (currentGame.isGameOver()) return;
+    const moves = currentGame.moves({ verbose: true });
+    if (moves.length > 0) {
+      const randomMove = moves[Math.floor(Math.random() * moves.length)];
+      currentGame.move(randomMove);
+      setGame(new Chess(currentGame.fen()));
+      setMoveHistory(prev => [...prev, randomMove.san]);
+      if (settings.soundEnabled) {
+        const audio = new Audio('/move-sound.mp3');
+        audio.play().catch(() => {});
+      }
+    }
+  }, [settings.soundEnabled]);
+
+  // Handle online opponent turns
+  useEffect(() => {
+    if (screen === 'game' && gameMode === 'online') {
+      const myTurnChar = playerColor === 'white' ? 'w' : 'b';
+      if (game.turn() !== myTurnChar && !game.isGameOver()) {
+        const timer = setTimeout(() => {
+          makeOnlineOpponentMove(game);
+        }, 800 + Math.random() * 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [screen, gameMode, game, playerColor, makeOnlineOpponentMove]);
+
   // Handle move
   const handleMove = useCallback((from: string, to: string, promotion?: string) => {
+    const currentTurn = game.turn();
+    const myTurnChar = playerColor === 'white' ? 'w' : 'b';
+
+    // In single player modes ('bot' or 'online'), strictly validate turn
+    if ((gameMode === 'bot' || gameMode === 'online') && currentTurn !== myTurnChar) {
+      return false;
+    }
+
     const gameCopy = new Chess(game.fen());
-    
+
     try {
       const move = gameCopy.move({ from, to, promotion: promotion || 'q' });
       if (move) {
         setGame(new Chess(gameCopy.fen()));
         setMoveHistory(prev => [...prev, move.san]);
-        
+
         if (settings.soundEnabled) {
           const audio = new Audio('/move-sound.mp3');
           audio.play().catch(() => {});
         }
-        
+
         if (gameMode === 'bot' && !gameCopy.isGameOver()) {
           setTimeout(() => {
             makeBotMove(gameCopy);
           }, 500);
         }
-        
+
         return true;
       }
     } catch (e) {
       console.error('Invalid move', e);
     }
-    
+
     return false;
-  }, [game, settings.soundEnabled, gameMode, makeBotMove]);
+  }, [game, playerColor, gameMode, settings.soundEnabled, makeBotMove]);
 
   // Check game over
   useEffect(() => {
@@ -461,6 +497,7 @@ export default function App() {
                 playerColor={playerColor}
                 onMove={handleMove}
                 settings={settings}
+                gameMode={gameMode}
               />
               
               <Controls
