@@ -9,6 +9,6 @@
     "not_found_handling": "single-page-application"
   },
   "build": {
-    "command": "pnpm build"
+    "command": "npm run build"
   }
 }
