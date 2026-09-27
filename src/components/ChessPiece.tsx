@@ -7,61 +7,65 @@ interface ChessPieceProps {
 export function ChessPiece({ type, color, size = 60 }: ChessPieceProps) {
   const isWhite = color === 'w';
   
-  // Modern glassmorphism colors
-  const fillColor = isWhite ? '#ffffff' : '#1a1a2e';
-  const strokeColor = isWhite ? '#e0e0e0' : '#0a0a1a';
-  const shadowColor = isWhite ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.5)';
-  const glowColor = isWhite ? 'rgba(255,255,255,0.8)' : 'rgba(100,100,255,0.3)';
+  // Professional chess piece colors
+  const fillColor = isWhite ? '#ffffff' : '#2d2d2d';
+  const strokeColor = isWhite ? '#666666' : '#000000';
+  const shadowColor = isWhite ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.6)';
   
   const pieces: Record<string, JSX.Element> = {
     p: (
       <g>
-        <circle cx="30" cy="20" r="8" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <path d="M 22 45 Q 22 35 30 30 Q 38 35 38 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="18" y="45" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <circle cx="30" cy="18" r="7" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <path d="M 22 45 Q 22 32 30 26 Q 38 32 38 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="19" y="45" width="22" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
     r: (
       <g>
-        <rect x="18" y="15" width="24" height="10" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="20" y="10" width="4" height="5" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
-        <rect x="28" y="10" width="4" height="5" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
-        <rect x="36" y="10" width="4" height="5" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
-        <rect x="20" y="25" width="20" height="20" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="16" y="45" width="28" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <path d="M 19 12 L 19 20 L 22 20 L 22 16 L 26 16 L 26 20 L 34 20 L 34 16 L 38 16 L 38 20 L 41 20 L 41 12 Z" 
+              fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="21" y="20" width="18" height="18" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="18" y="38" width="24" height="7" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="16" y="45" width="28" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
     n: (
       <g>
-        <path d="M 20 45 L 20 30 Q 20 20 25 15 L 30 10 L 35 15 Q 40 20 40 30 L 40 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <circle cx="28" cy="20" r="2" fill={strokeColor} />
-        <path d="M 25 25 Q 28 28 32 25" fill="none" stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="16" y="45" width="28" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <path d="M 22 45 L 22 28 Q 22 20 26 16 L 28 12 L 32 16 Q 38 20 38 28 L 38 45 Z" 
+              fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <path d="M 26 16 L 24 14 L 26 12 L 28 14 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+        <circle cx="28" cy="22" r="1.5" fill={strokeColor} />
+        <path d="M 24 28 Q 28 30 32 28" fill="none" stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="18" y="45" width="24" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
     b: (
       <g>
-        <circle cx="30" cy="15" r="6" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <path d="M 22 45 Q 22 30 30 20 Q 38 30 38 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <line x1="30" y1="15" x2="30" y2="25" stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="18" y="45" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <circle cx="30" cy="14" r="5" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <path d="M 24 45 Q 24 28 30 18 Q 36 28 36 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <line x1="30" y1="14" x2="30" y2="24" stroke={strokeColor} strokeWidth="1.5" />
+        <line x1="26" y1="18" x2="34" y2="18" stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="20" y="45" width="20" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
     q: (
       <g>
-        <circle cx="30" cy="12" r="4" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <circle cx="20" cy="18" r="3" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
-        <circle cx="40" cy="18" r="3" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
-        <path d="M 20 45 Q 20 30 25 25 L 30 20 L 35 25 Q 40 30 40 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="18" y="45" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <circle cx="30" cy="10" r="3" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <circle cx="22" cy="16" r="2.5" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+        <circle cx="38" cy="16" r="2.5" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+        <circle cx="18" cy="22" r="2" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+        <circle cx="42" cy="22" r="2" fill={fillColor} stroke={strokeColor} strokeWidth="1" />
+        <path d="M 20 45 Q 20 28 24 24 L 30 20 L 36 24 Q 40 28 40 45 Z" 
+              fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="19" y="45" width="22" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
     k: (
       <g>
-        <line x1="30" y1="8" x2="30" y2="18" stroke={strokeColor} strokeWidth="2" />
-        <line x1="25" y1="13" x2="35" y2="13" stroke={strokeColor} strokeWidth="2" />
-        <path d="M 22 45 Q 22 30 30 20 Q 38 30 38 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
-        <rect x="18" y="45" width="24" height="8" rx="2" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <line x1="30" y1="6" x2="30" y2="16" stroke={strokeColor} strokeWidth="2.5" />
+        <line x1="25" y1="11" x2="35" y2="11" stroke={strokeColor} strokeWidth="2.5" />
+        <path d="M 24 45 Q 24 28 30 18 Q 36 28 36 45 Z" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+        <rect x="20" y="45" width="20" height="6" rx="1" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
       </g>
     ),
   };
@@ -73,15 +77,9 @@ export function ChessPiece({ type, color, size = 60 }: ChessPieceProps) {
       viewBox="0 0 60 60"
       className="select-none pointer-events-none"
       style={{
-        filter: `drop-shadow(0 4px 8px ${shadowColor}) drop-shadow(0 0 10px ${glowColor})`,
+        filter: `drop-shadow(0 3px 6px ${shadowColor})`,
       }}
     >
-      <defs>
-        <linearGradient id={`gradient-${type}-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={isWhite ? '#ffffff' : '#2a2a4e'} />
-          <stop offset="100%" stopColor={isWhite ? '#e0e0e0' : '#0a0a1a'} />
-        </linearGradient>
-      </defs>
       {pieces[type]}
     </svg>
   );

@@ -9,6 +9,8 @@ import { MatchmakingQueue } from './components/MatchmakingQueue';
 import { PointsSystem } from './components/PointsSystem';
 import { LiquidGlassBackground } from './components/LiquidGlassBackground';
 import { GameMenu } from './components/GameMenu';
+import { TimeControlSelect } from './components/TimeControlSelect';
+import { DifficultySelect } from './components/DifficultySelect';
 
 export type GameMode = 'bot' | 'pvp' | 'online';
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -33,7 +35,7 @@ export interface GameSettings {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'menu' | 'game' | 'settings' | 'stats' | 'matchmaking'>('menu');
+  const [screen, setScreen] = useState<'menu' | 'game' | 'settings' | 'stats' | 'matchmaking' | 'timeControl' | 'difficulty'>('menu');
   const [gameMode, setGameMode] = useState<GameMode>('bot');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [timeControl, setTimeControl] = useState<TimeControl>('10min');
@@ -78,6 +80,18 @@ export default function App() {
     setPlayerColor('white');
     setMoveHistory([]);
     setScreen('game');
+  }, []);
+
+  // Handle time control selection for bot game
+  const handleTimeControlSelect = useCallback((time: TimeControl) => {
+    setTimeControl(time);
+    startGame('bot', difficulty, time);
+  }, [startGame, difficulty]);
+
+  // Handle difficulty selection
+  const handleDifficultySelect = useCallback((diff: Difficulty) => {
+    setDifficulty(diff);
+    setScreen('timeControl');
   }, []);
 
   // Start online matchmaking
@@ -212,14 +226,17 @@ export default function App() {
 
             <div className="space-y-3">
               <button
-                onClick={() => startGame('bot', 'medium', '10min')}
+                onClick={() => setScreen('difficulty')}
                 className="w-full py-4 px-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:bg-white/20 transition-all shadow-lg"
               >
                 Play vs Bot
               </button>
 
               <button
-                onClick={() => startGame('pvp')}
+                onClick={() => {
+                  setTimeControl('unlimited');
+                  startGame('pvp', undefined, 'unlimited');
+                }}
                 className="w-full py-4 px-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:bg-white/20 transition-all shadow-lg"
               >
                 Local 2 Player
@@ -271,6 +288,32 @@ export default function App() {
             setPlayerColor(opponentColor);
           }}
           onCancel={() => setScreen('menu')}
+        />
+      </div>
+    );
+  }
+
+  // Time Control Selection Screen
+  if (screen === 'timeControl') {
+    return (
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <TimeControlSelect
+          onSelect={handleTimeControlSelect}
+          onBack={() => setScreen('difficulty')}
+        />
+      </div>
+    );
+  }
+
+  // Difficulty Selection Screen
+  if (screen === 'difficulty') {
+    return (
+      <div className="relative min-h-screen">
+        <LiquidGlassBackground />
+        <DifficultySelect
+          onSelect={handleDifficultySelect}
+          onBack={() => setScreen('menu')}
         />
       </div>
     );
