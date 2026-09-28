@@ -7,6 +7,10 @@ import { formatClock } from '../hooks/useGameClock';
 interface ChessBoardProps {
   game: Chess;
   playerColor: 'white' | 'black';
+  /** Manual orientation override from the Flip button. */
+  boardFlipped?: boolean;
+  /** When true the board always shows the local player's pieces at the bottom. */
+  lockedToPlayerSide?: boolean;
   gameMode: GameMode;
   onMove: (from: string, to: string, promotion?: string) => boolean;
   settings: GameSettings;
@@ -15,6 +19,8 @@ interface ChessBoardProps {
   whiteTime: number;
   blackTime: number;
   clockRunning: boolean;
+  /** Local player's side label for online games ("You" / "Opponent"). */
+  opponentLabel?: string;
 }
 
 const THEME_COLORS = {
@@ -27,14 +33,22 @@ const THEME_COLORS = {
 const PROMOTION_OPTIONS = ['q', 'r', 'b', 'n'] as const;
 
 export const ChessBoard = memo(function ChessBoard({
-  game, playerColor, gameMode, onMove, settings,
+  game, playerColor, boardFlipped, lockedToPlayerSide, gameMode, onMove, settings,
   pendingPromotion, onPromotionSelect, whiteTime, blackTime, clockRunning,
 }: ChessBoardProps) {
   const board = game.board();
-  // Flip for two-player games so the side to move always faces the bottom.
-  const flipped = settings.autoFlipBoard && (gameMode === 'pvp' || gameMode === 'online')
-    ? game.turn() === 'b'
-    : playerColor === 'black' && settings.autoFlipBoard;
+  // Online / bot: the local player's side always sits at the bottom so each
+  // player sees their own pieces (and colors) correctly. PvP hot-seat: flip
+  // with the side to move when auto-flip is enabled.
+  const baseFlipped = lockedToPlayerSide || gameMode === 'online'
+    ? playerColor === 'black'
+    : gameMode === 'bot'
+      ? playerColor === 'black' && settings.autoFlipBoard
+      : settings.autoFlipBoard && gameMode === 'pvp'
+        ? game.turn() === 'b'
+        : false;
+  // The Flip button toggles orientation relative to the default view.
+  const flipped = boardFlipped ? !baseFlipped : baseFlipped;
   const fen = game.fen();
 
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -72,7 +86,7 @@ export const ChessBoard = memo(function ChessBoard({
   }, [game, fen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canInteract = !pendingPromotion && !game.isGameOver() &&
-    (gameMode !== 'bot' || game.turn() === (playerColor === 'white' ? 'w' : 'b'));
+    (gameMode === 'pvp' || game.turn() === (playerColor === 'white' ? 'w' : 'b'));
 
   const handleSquareClick = (square: Square) => {
     if (!canInteract) return;
@@ -154,8 +168,14 @@ export const ChessBoard = memo(function ChessBoard({
   const topIsWhite = flipped;
   const topTime = topIsWhite ? whiteTime : blackTime;
   const bottomTime = topIsWhite ? blackTime : whiteTime;
-  const topLabel = topIsWhite ? 'White' : 'Black';
-  const bottomLabel = topIsWhite ? 'Black' : 'White';
+  // In online games the sides are fixed to the local player's perspective.
+  const isOnline = gameMode === 'online';
+  const topLabel = isOnline
+    ? (playerColor === 'white' ? 'Opponent' : 'You')
+    : (topIsWhite ? 'White' : 'Black');
+  const bottomLabel = isOnline
+    ? (playerColor === 'white' ? 'You' : 'Opponent')
+    : (topIsWhite ? 'Black' : 'White');
   const topActive = game.turn() === (topIsWhite ? 'w' : 'b');
   const bottomActive = !topActive;
 
