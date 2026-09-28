@@ -7,14 +7,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: { params: { eventsPerSecond: 10 } },
 });
 
-export const isSupabaseConfigured = (): boolean => {
-  return (
-    Boolean(supabaseUrl) &&
-    !supabaseUrl.includes('placeholder') &&
-    Boolean(supabaseAnonKey) &&
-    supabaseAnonKey !== 'placeholder'
-  );
-};
+/**
+ * NOTE: this must be evaluated at module load. If it were re-read on every
+ * call, a dev server restart (or an env var added/removed mid-session) could
+ * flip the storage backend while tabs are open — one tab would talk to
+ * Supabase while another still used localStorage, so cross-device joins would
+ * silently fail ("room not found") even though same-machine duplicate tabs
+ * kept working via BroadcastChannel/localStorage.
+ */
+export const IS_SUPABASE_CONFIGURED: boolean =
+  Boolean(supabaseUrl) &&
+  !supabaseUrl.includes('placeholder') &&
+  Boolean(supabaseAnonKey) &&
+  supabaseAnonKey !== 'placeholder';
+
+export const isSupabaseConfigured = (): boolean => IS_SUPABASE_CONFIGURED;
 
 export interface PrivateRoom {
   id: string;
@@ -227,7 +234,13 @@ export async function createPrivateRoom(hostColor: 'white' | 'black'): Promise<P
     return data as PrivateRoom;
   }
 
-  console.warn('[CreateRoom] Supabase environment variables not configured. Creating offline/local room.');
+  console.warn(
+    '[CreateRoom] ⚠️ VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are NOT set in this ' +
+      'build — creating an OFFLINE/LOCAL room stored only in this browser\'s ' +
+      'localStorage. It can be joined from duplicate tabs on the SAME machine, ' +
+      'but NEVER from another device. Configure Supabase and redeploy for ' +
+      'cross-device play. Creating room with code:', code,
+  );
   const localRoom: PrivateRoom = {
     id: crypto.randomUUID(),
     access_code: code,
@@ -339,7 +352,13 @@ export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom
   );
 
   if (!foundId) {
-    throw new Error(`Room with code "${cleanCode}" not found. Please double-check the code and try again.`);
+    throw new Error(
+      `Room with code "${cleanCode}" not found in this browser. ` +
+        'Note: the app is running WITHOUT Supabase configured, so rooms exist ' +
+        'only inside the browser that created them and cannot be joined from ' +
+        'another device. Set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY and ' +
+        'redeploy to play across devices.'
+    );
   }
 
   const room = rooms[foundId];
