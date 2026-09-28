@@ -23,43 +23,36 @@ export function GameMenu({ isOpen, onClose, onSurrender, onNewGame, onBackToMenu
       
       {/* Menu Panel */}
       <div 
-        className="relative w-full max-w-md rounded-2xl p-6 space-y-4"
-        style={{
-          background: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(30px)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-        }}
-      >
+        className="relative w-full max-w-md rounded-xl p-6 space-y-4 border border-zinc-800 bg-white/[0.03]">
         {!showSurrenderConfirm ? (
           <>
-            <h2 className="text-3xl font-bold text-white text-center mb-6">Game Menu</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-100 text-center mb-6">Game Menu</h2>
             
             <div className="space-y-3">
               <button
                 onClick={onClose}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
+                className="w-full py-2.5 rounded-lg border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-800/60 transition-colors"
               >
                 Resume Game
               </button>
               
               <button
                 onClick={() => setShowSurrenderConfirm(true)}
-                className="w-full py-3 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-white font-medium transition-all"
+                className="w-full py-3 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-zinc-100 font-medium transition-all"
               >
                 Surrender
               </button>
               
               <button
                 onClick={onNewGame}
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-500/30 to-blue-500/30 hover:from-purple-500/40 hover:to-blue-500/40 border border-white/20 rounded-xl text-white font-medium transition-all"
+                className="w-full py-2.5 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-white transition-colors"
               >
                 New Game
               </button>
               
               <button
                 onClick={onBackToMenu}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
+                className="w-full py-2.5 rounded-lg border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-800/60 transition-colors"
               >
                 Back to Main Menu
               </button>
@@ -67,8 +60,8 @@ export function GameMenu({ isOpen, onClose, onSurrender, onNewGame, onBackToMenu
           </>
         ) : (
           <>
-            <h2 className="text-2xl font-bold text-white text-center mb-4">Confirm Surrender</h2>
-            <p className="text-white/70 text-center mb-6">
+            <h2 className="text-2xl font-bold text-zinc-100 text-center mb-4">Confirm Surrender</h2>
+            <p className="text-zinc-400 text-center mb-6">
               Are you sure you want to surrender? This will count as a loss.
             </p>
             
@@ -78,14 +71,14 @@ export function GameMenu({ isOpen, onClose, onSurrender, onNewGame, onBackToMenu
                   onSurrender();
                   onClose();
                 }}
-                className="w-full py-3 px-4 bg-red-500/30 hover:bg-red-500/40 border border-red-500/40 rounded-xl text-white font-medium transition-all"
+                className="w-full py-3 px-4 bg-red-500/30 hover:bg-red-500/40 border border-red-500/40 rounded-xl text-zinc-100 font-medium transition-all"
               >
                 Yes, Surrender
               </button>
               
               <button
                 onClick={() => setShowSurrenderConfirm(false)}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
+                className="w-full py-2.5 rounded-lg border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-800/60 transition-colors"
               >
                 Cancel
               </button>

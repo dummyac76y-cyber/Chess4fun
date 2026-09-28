@@ -9,45 +9,29 @@ interface ControlsProps {
   onOpenMenu: () => void;
 }
 
+const btn =
+  'py-2.5 px-3 rounded-lg border text-sm font-medium transition-colors';
+
 export const Controls = memo(function Controls({
-  canUndo, onNewGame, onFlipBoard, onUndo, onSurrender, onOpenMenu,
+  canUndo, onFlipBoard, onUndo, onSurrender, onOpenMenu,
 }: ControlsProps) {
   return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-      }}
-    >
-      <div className="grid grid-cols-4 gap-3">
-        <button
-          onClick={onOpenMenu}
-          className="py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-        >
+    <div className="rounded-xl border border-zinc-800 bg-white/[0.03] p-3">
+      <div className="grid grid-cols-4 gap-2">
+        <button onClick={onOpenMenu} className={`${btn} border-zinc-800 text-zinc-200 hover:bg-zinc-800/60`}>
           Menu
         </button>
-
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="py-3 px-4 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 rounded-xl text-white font-medium transition-all"
+          className={`${btn} border-zinc-800 text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           Undo
         </button>
-
-        <button
-          onClick={onFlipBoard}
-          className="py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-        >
+        <button onClick={onFlipBoard} className={`${btn} border-zinc-800 text-zinc-200 hover:bg-zinc-800/60`}>
           Flip
         </button>
-
-        <button
-          onClick={onSurrender}
-          className="py-3 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-white font-medium transition-all"
-        >
+        <button onClick={onSurrender} className={`${btn} border-red-900/60 text-red-400 hover:bg-red-950/40`}>
           Surrender
         </button>
       </div>

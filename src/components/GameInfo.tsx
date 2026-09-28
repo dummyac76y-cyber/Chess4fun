@@ -37,39 +37,34 @@ export const GameInfo = memo(function GameInfo({
 
   return (
     <div
-      className="rounded-2xl p-4 space-y-4"
-      style={{
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-      }}
+      className="rounded-xl border border-zinc-800 bg-white/[0.03] p-4 space-y-4"
     >
       <div>
-        <h3 className="text-white/70 text-sm font-semibold mb-2">Game Status</h3>
-        <p className="text-white text-lg font-bold">{status}</p>
+        <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Game Status</h3>
+        <p className="text-zinc-100 text-base font-medium">{status}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-white/60 text-xs">Mode</p>
-          <p className="text-white font-semibold capitalize">{gameMode}</p>
+        <div className="bg-zinc-900/70 rounded-lg p-3">
+          <p className="text-zinc-500 text-xs">Mode</p>
+          <p className="text-zinc-100 font-semibold capitalize">{gameMode}</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-white/60 text-xs">Time</p>
-          <p className="text-white font-semibold">{timeControl}</p>
+        <div className="bg-zinc-900/70 rounded-lg p-3">
+          <p className="text-zinc-500 text-xs">Time</p>
+          <p className="text-zinc-100 font-semibold">{timeControl}</p>
         </div>
       </div>
 
       <div>
-        <h3 className="text-white/70 text-sm font-semibold mb-2">Move History</h3>
-        <div className="bg-white/5 rounded-lg p-3 max-h-48 overflow-y-auto">
+        <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Move History</h3>
+        <div className="bg-zinc-900/70 rounded-lg p-3 max-h-48 overflow-y-auto">
           {movePairs.length === 0 ? (
-            <p className="text-white/40 text-sm italic">No moves yet</p>
+            <p className="text-zinc-600 text-sm italic">No moves yet</p>
           ) : (
             <div className="space-y-1">
               {movePairs.map(pair => (
-                <div key={pair.number} className="grid grid-cols-[2.5rem_1fr_1fr] text-white text-sm">
-                  <span className="text-white/50">{pair.number}.</span>
+                <div key={pair.number} className="grid grid-cols-[2.5rem_1fr_1fr] text-zinc-100 text-sm">
+                  <span className="text-zinc-100/50">{pair.number}.</span>
                   <span>{pair.white}</span>
                   <span>{pair.black ?? ''}</span>
                 </div>

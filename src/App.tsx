@@ -5,7 +5,6 @@ import { GameInfo } from './components/GameInfo';
 import { Controls } from './components/Controls';
 import { Settings } from './components/Settings';
 import { Analysis } from './components/Analysis';
-import { MatchmakingQueue } from './components/MatchmakingQueue';
 import { PointsSystem } from './components/PointsSystem';
 import { LiquidGlassBackground } from './components/LiquidGlassBackground';
 import { GameMenu } from './components/GameMenu';
@@ -33,6 +32,7 @@ export interface PlayerStats {
 }
 
 export interface GameSettings {
+  playerName: string;
   soundEnabled: boolean;
   showCoordinates: boolean;
   autoFlipBoard: boolean;
@@ -46,6 +46,7 @@ const DEFAULT_STATS: PlayerStats = {
 };
 
 const DEFAULT_SETTINGS: GameSettings = {
+  playerName: 'Player',
   soundEnabled: true,
   showCoordinates: true,
   autoFlipBoard: false,
@@ -133,12 +134,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('chessSettings', JSON.stringify(settings));
   }, [settings]);
-
-  // Cleanup pending bot/opponent timers on unmount.
-  useEffect(() => () => {
-    if (botTimerRef.current !== null) window.clearTimeout(botTimerRef.current);
-    if (opponentTimerRef.current !== null) window.clearTimeout(opponentTimerRef.current);
-  }, []);
 
   const game = gameRef.current;
 
@@ -228,19 +223,21 @@ export default function App() {
     rematchPendingRef.current = false;
     clock.reset(timeControl);
     rerender();
-    postRoom({ t: 'start', id: myIdRef.current, fen: lastBroadcastFenRef.current, game: gameIdRef.current });
+    postRoom({ t: 'start', id: myIdRef.current, fen: lastBroadcastFenRef.current, color: 'white', game: gameIdRef.current });
   }, [clock, postRoom, rerender, timeControl]);
 
-  /** Host-side watchdog: starts the game once both seats are filled. */
+  /** Host-side watchdog: starts the game once both seats are filled. Uses a
+   * ref so it doesn't depend on startGame's declaration order. */
+  const startGameRef = useRef<(mode: GameMode, opts?: { difficulty?: Difficulty; time?: TimeControl; playerColor?: 'white' | 'black'; room?: string }) => void>(() => {});
   const checkStartRoom = useCallback(() => {
     const room = onlineRoomRef.current;
     if (!room || !isHostRef.current) return;
     const a = readRoom(room);
     if (a?.guestId && screenRef.current === 'matchmaking') {
       setPeerConnected(true);
-      startGame('online', { time: timeControl, playerColor: 'white', room });
+      startGameRef.current('online', { time: timeControl, playerColor: 'white', room });
     }
-  }, [startGame, timeControl]);
+  }, [timeControl]);
 
   const joinRoom = useCallback((rawCode: string) => {
     const code = rawCode.trim().toUpperCase();
@@ -413,6 +410,7 @@ export default function App() {
       window.setTimeout(() => clock.start(), 600);
     }
   }, [clock, postRoom, timeControl]);
+  startGameRef.current = startGame;
 
   const handleTimeControlSelect = useCallback((time: TimeControl) => {
     startGame('bot', { difficulty, time });
@@ -629,8 +627,10 @@ export default function App() {
     startGame(gameMode, { difficulty, time: timeControl, playerColor });
   }, [difficulty, gameMode, playerColor, postRoom, startGame, timeControl]);
 
-  const glassButton = 'w-full py-4 px-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:bg-white/20 transition-all shadow-lg';
-  const smallButton = 'py-3 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white font-medium hover:bg-white/20 transition-all';
+  const primaryButton = 'w-full py-3 rounded-xl bg-zinc-100 text-zinc-900 font-medium text-[15px] hover:bg-white transition-colors';
+  const secondaryButton = 'w-full py-3 rounded-xl border border-zinc-800 text-zinc-200 font-medium text-[15px] hover:bg-zinc-800/60 transition-colors';
+  const ghostButton = 'py-2.5 px-4 rounded-lg border border-zinc-800 text-sm text-zinc-300 hover:bg-zinc-800/60 transition-colors';
+  const panel = 'rounded-xl border border-zinc-800 bg-white/[0.03] p-6 space-y-6';
 
   // ---- Screens -------------------------------------------------------------
 
@@ -639,42 +639,28 @@ export default function App() {
       <div className="relative min-h-screen">
         <LiquidGlassBackground />
         <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-md space-y-6">
-            <div className="text-center mb-8">
-              <h1 className="text-6xl font-bold text-white mb-2 drop-shadow-lg">Chess</h1>
-              <p className="text-white/70 text-lg">Modern Glass Edition</p>
-            </div>
+          <div className="w-full max-w-sm space-y-8">
+            <header className="text-center">
+              <h1 className="text-4xl font-semibold tracking-tight text-zinc-100">Chess</h1>
+              <p className="text-sm text-zinc-500 mt-2">
+                {settings.playerName} · {stats.points} pts · Rank {Math.floor(stats.points / 100)}
+              </p>
+            </header>
 
-            <div className="space-y-3">
-              <button onClick={() => setScreen('difficulty')} className={glassButton}>
+            <div className="space-y-2.5">
+              <button onClick={() => setScreen('difficulty')} className={primaryButton}>
                 Play vs Bot
               </button>
-
-              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className={glassButton}>
+              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className={secondaryButton}>
                 Local 2 Player
               </button>
-
-              <button
-                onClick={startMatchmaking}
-                className="w-full py-4 px-6 bg-gradient-to-r from-purple-500/30 to-blue-500/30 backdrop-blur-xl border border-white/20 rounded-2xl text-white font-semibold text-lg hover:from-purple-500/40 hover:to-blue-500/40 transition-all shadow-lg"
-              >
-                Find Online Match
+              <button onClick={startMatchmaking} className={secondaryButton}>
+                Private Room
               </button>
-
-              <div className="grid grid-cols-2 gap-3 pt-3">
-                <button onClick={() => setScreen('stats')} className={smallButton}>
-                  Statistics
-                </button>
-                <button onClick={() => setScreen('settings')} className={smallButton}>
-                  Settings
-                </button>
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
+                <button onClick={() => setScreen('stats')} className={ghostButton}>Statistics</button>
+                <button onClick={() => setScreen('settings')} className={ghostButton}>Settings</button>
               </div>
-            </div>
-
-            <div className="text-center pt-4">
-              <p className="text-white/60 text-sm">
-                Points: {stats.points} | Rank: {Math.floor(stats.points / 100)}
-              </p>
             </div>
           </div>
         </div>
@@ -686,85 +672,65 @@ export default function App() {
     return (
       <div className="relative min-h-screen">
         <LiquidGlassBackground />
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <div className="w-full max-w-md">
-            <div
-              className="rounded-2xl p-6 space-y-6"
-              style={{
-                background: 'rgba(0,0,0,0.4)',
-                backdropFilter: 'blur(25px)',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-            >
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-white mb-2">Private Room</h2>
-                <p className="text-white/70">
-                  Create a room, then open this app in a second browser tab and join with the
-                  same code. One player gets White, the other Black – each sees their own pieces
-                  at the bottom and every move is synced live between the two tabs.
+            <div className={panel}>
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-semibold tracking-tight text-zinc-100">Private Room</h2>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  Create a room, then open this app in a second browser tab and join with the same
+                  code. One player gets White, the other Black — each sees their own pieces at the
+                  bottom and every move is synced live between the two tabs.
                 </p>
               </div>
 
               {onlineRoom ? (
-                <div className="space-y-4 text-center">
-                  <div className="text-white/70">Room code</div>
-                  <div className="text-5xl font-mono font-bold tracking-widest text-white select-all">
-                    {onlineRoom}
+                <div className="space-y-5 text-center">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Room code</p>
+                    <p className="text-4xl font-mono font-semibold tracking-[0.3em] text-zinc-100 select-all">
+                      {onlineRoom}
+                    </p>
                   </div>
                   {isHostRef.current && !peerConnected ? (
-                    <div className="flex items-center justify-center gap-3 text-white/80">
-                      <div className="w-6 h-6 rounded-full border-4 border-purple-400 border-t-transparent animate-spin" />
-                      Waiting for a player to join with this code…
-                    </div>
+                    <p className="flex items-center justify-center gap-3 text-sm text-zinc-400">
+                      <span className="w-4 h-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
+                      Waiting for a player to join…
+                    </p>
                   ) : peerConnected ? (
-                    <div className="text-green-300 font-semibold">Opponent connected – starting…</div>
+                    <p className="text-sm font-medium text-emerald-400">Opponent connected — starting…</p>
                   ) : null}
-                  <button
-                    onClick={() => { leaveRoom(); setRoomNote(null); }}
-                    className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-                  >
+                  <button onClick={() => { leaveRoom(); setRoomNote(null); }} className={secondaryButton}>
                     Cancel
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <button
-                    onClick={createRoom}
-                    className="w-full py-4 bg-gradient-to-r from-purple-500/30 to-blue-500/30 hover:from-purple-500/40 hover:to-blue-500/40 border border-white/20 rounded-2xl text-white font-semibold text-lg transition-all"
-                  >
+                  <button onClick={createRoom} className={primaryButton}>
                     Create Private Room
                   </button>
 
-                  <div className="flex items-center gap-3 text-white/50 text-sm">
-                    <div className="flex-1 h-px bg-white/20" /> or join an existing room <div className="flex-1 h-px bg-white/20" />
+                  <div className="flex items-center gap-3 text-zinc-600 text-xs">
+                    <div className="flex-1 h-px bg-zinc-800" /> or join an existing room <div className="flex-1 h-px bg-zinc-800" />
                   </div>
 
-                  <form
-                    className="flex gap-3"
-                    onSubmit={(e) => { e.preventDefault(); joinRoom(roomInput); }}
-                  >
+                  <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); joinRoom(roomInput); }}>
                     <input
                       value={roomInput}
                       onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
                       placeholder="ROOM CODE"
                       maxLength={8}
-                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-mono tracking-widest placeholder-white/40 focus:outline-none focus:border-purple-400"
+                      className="flex-1 px-4 py-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 font-mono tracking-widest text-sm placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
                     />
-                    <button
-                      type="submit"
-                      className="py-3 px-6 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-                    >
+                    <button type="submit" className={ghostButton}>
                       Join
                     </button>
                   </form>
 
-                  {roomError && <p className="text-red-300 text-sm text-center">{roomError}</p>}
-                  {roomNote && <p className="text-white/70 text-sm text-center">{roomNote}</p>}
+                  {roomError && <p className="text-red-400 text-sm text-center">{roomError}</p>}
+                  {roomNote && <p className="text-zinc-500 text-sm text-center">{roomNote}</p>}
 
-                  <button
-                    onClick={() => setScreen('menu')}
-                    className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-                  >
+                  <button onClick={() => setScreen('menu')} className={`${secondaryButton} mt-2`}>
                     Back to Main Menu
                   </button>
                 </div>
@@ -925,38 +891,21 @@ export default function App() {
       {resultModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeGameAndReturnToMenu} />
-          <div
-            className="relative w-full max-w-sm rounded-2xl p-6 space-y-4 text-center"
-            style={{
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(30px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-            }}
-          >
-            <div className="text-5xl">
-              {resultModal.outcome === 'win' ? '\u{1F3C6}' : resultModal.outcome === 'loss' ? '\u{1F494}' : '\u{1F91D}'}
-            </div>
-            <h2 className="text-3xl font-bold text-white">{resultModal.title}</h2>
-            <p className="text-white/70">{resultModal.subtitle}</p>
+          <div className="relative w-full max-w-sm rounded-2xl border border-zinc-800 bg-[#131315] p-6 space-y-4 text-center shadow-2xl shadow-black/50">
+            <h2 className="text-2xl font-semibold tracking-tight text-zinc-100">{resultModal.title}</h2>
+            <p className="text-sm text-zinc-500">{resultModal.subtitle}</p>
             {gameMode !== 'pvp' && (
-              <p className="text-white/60 text-sm">
+              <p className="text-zinc-500 text-sm">
                 {resultModal.outcome === 'win'
                   ? `+${10 * (difficulty === 'hard' ? 3 : difficulty === 'medium' ? 2 : 1)} points`
                   : resultModal.outcome === 'draw' ? '+2 points' : 'No points'} · Total: {stats.points}
               </p>
             )}
-            <div className="space-y-3 pt-2">
-              <button
-                onClick={rematch}
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-500/30 to-blue-500/30 hover:from-purple-500/40 hover:to-blue-500/40 border border-white/20 rounded-xl text-white font-medium transition-all"
-              >
+            <div className="space-y-2.5 pt-2">
+              <button onClick={rematch} className={primaryButton}>
                 Rematch
               </button>
-              <button
-                onClick={closeGameAndReturnToMenu}
-                className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-              >
+              <button onClick={closeGameAndReturnToMenu} className={secondaryButton}>
                 Back to Main Menu
               </button>
             </div>

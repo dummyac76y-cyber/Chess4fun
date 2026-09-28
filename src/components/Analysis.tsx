@@ -11,7 +11,7 @@ interface AnalysisProps {
 function evalLabel(cp: number): { text: string; color: string } {
   if (cp >= 150) return { text: 'Winning', color: 'text-green-400' };
   if (cp >= 50) return { text: 'Slightly better', color: 'text-green-300' };
-  if (cp > -50) return { text: 'Equal', color: 'text-white/70' };
+  if (cp > -50) return { text: 'Equal', color: 'text-zinc-400' };
   if (cp > -150) return { text: 'Slightly worse', color: 'text-orange-300' };
   return { text: 'Losing', color: 'text-red-400' };
 }
@@ -32,15 +32,10 @@ export function Analysis({ game, analysis, enabled }: AnalysisProps) {
   if (!enabled) {
     return (
       <div
-        className="rounded-2xl p-4"
-        style={{
-          background: 'rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(25px)',
-          border: '1px solid rgba(255,255,255,0.15)',
-        }}
+        className="rounded-xl border border-zinc-800 bg-white/[0.03] p-4"
       >
-        <h3 className="text-white/70 text-sm font-semibold mb-3">Analysis</h3>
-        <p className="text-white/40 text-sm italic">Move quality is disabled in settings.</p>
+        <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">Analysis</h3>
+        <p className="text-zinc-600 text-sm italic">Move quality is disabled in settings.</p>
       </div>
     );
   }
@@ -51,34 +46,28 @@ export function Analysis({ game, analysis, enabled }: AnalysisProps) {
 
   return (
     <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(25px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-      }}
-    >
+      className="rounded-xl p-4 space-y-3 border border-zinc-800 bg-white/[0.03]">
       <div className="flex items-center justify-between">
-        <h3 className="text-white/70 text-sm font-semibold">Evaluation</h3>
+        <h3 className="text-xs uppercase tracking-wider text-zinc-500">Evaluation</h3>
         <span className={`text-sm font-medium ${label.color}`}>{label.text}</span>
       </div>
 
       {/* White/black advantage bar */}
-      <div className="h-3 w-full rounded-full overflow-hidden bg-[#2d2d2d] border border-white/10">
+      <div className="h-3 w-full rounded-full overflow-hidden bg-[#2d2d2d] border border-zinc-800">
         <div
           className="h-full bg-white transition-all duration-500"
           style={{ width: `${whitePct}%` }}
         />
       </div>
 
-      <div className="flex justify-between text-xs text-white/60">
+      <div className="flex justify-between text-xs text-zinc-500">
         <span>White +{displayCp}</span>
         <span>{evalScore >= 0 ? '+' : ''}{(evalScore / 100).toFixed(1)}</span>
         <span>Black +{displayCp}</span>
       </div>
 
       {analysis?.lastMove && (
-        <p className="text-white/50 text-xs">Last move: <span className="text-white/80 font-medium">{analysis.lastMove}</span></p>
+        <p className="text-zinc-100/50 text-xs">Last move: <span className="text-zinc-300 font-medium">{analysis.lastMove}</span></p>
       )}
     </div>
   );

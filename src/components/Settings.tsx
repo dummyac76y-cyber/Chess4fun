@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { GameSettings } from '../App';
 
 interface SettingsProps {
@@ -6,105 +7,151 @@ interface SettingsProps {
   onBack: () => void;
 }
 
-export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) {
+const card = 'rounded-2xl border border-zinc-800 bg-white/[0.03] p-5 space-y-5';
+const label = 'text-sm text-zinc-400';
+const inputBase =
+  'w-full px-4 py-2.5 rounded-lg bg-zinc-900 border text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-zinc-500';
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (next: boolean) => void }) {
   return (
-    <div className="relative min-h-screen">
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div 
-            className="rounded-2xl p-6 space-y-6"
-            style={{
-              background: 'rgba(0,0,0,0.4)',
-              backdropFilter: 'blur(25px)',
-              border: '1px solid rgba(255,255,255,0.15)',
-            }}
-          >
-            <h2 className="text-3xl font-bold text-white text-center">Settings</h2>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${
+        on ? 'bg-emerald-500' : 'bg-zinc-700'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+          on ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-white">Sound Effects</span>
-                <button
-                  onClick={() => onSettingsChange({ ...settings, soundEnabled: !settings.soundEnabled })}
-                  className={`w-12 h-6 rounded-full transition-all ${
-                    settings.soundEnabled ? 'bg-purple-500' : 'bg-white/20'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    settings.soundEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
+function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-zinc-200">{title}</p>
+        {hint && <p className="text-xs text-zinc-500 mt-0.5">{hint}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
 
-              <div className="flex items-center justify-between">
-                <span className="text-white">Show Coordinates</span>
-                <button
-                  onClick={() => onSettingsChange({ ...settings, showCoordinates: !settings.showCoordinates })}
-                  className={`w-12 h-6 rounded-full transition-all ${
-                    settings.showCoordinates ? 'bg-purple-500' : 'bg-white/20'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    settings.showCoordinates ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
+export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) {
+  // Draft state: nothing is persisted until "Save Changes" is pressed.
+  const [draft, setDraft] = useState<GameSettings>(settings);
+  const [saved, setSaved] = useState(false);
 
-              <div className="flex items-center justify-between">
-                <span className="text-white">Auto-Flip Board</span>
-                <button
-                  onClick={() => onSettingsChange({ ...settings, autoFlipBoard: !settings.autoFlipBoard })}
-                  className={`w-12 h-6 rounded-full transition-all ${
-                    settings.autoFlipBoard ? 'bg-purple-500' : 'bg-white/20'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    settings.autoFlipBoard ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
+  useEffect(() => {
+    if (!saved) return;
+    const t = window.setTimeout(() => setSaved(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [saved]);
 
-              <div className="flex items-center justify-between">
-                <span className="text-white">Show Move Quality</span>
-                <button
-                  onClick={() => onSettingsChange({ ...settings, showMoveQuality: !settings.showMoveQuality })}
-                  className={`w-12 h-6 rounded-full transition-all ${
-                    settings.showMoveQuality ? 'bg-purple-500' : 'bg-white/20'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                    settings.showMoveQuality ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
-                </button>
-              </div>
+  const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
+  const nameInvalid = draft.playerName.trim().length === 0;
 
-              <div>
-                <span className="text-white block mb-2">Board Theme</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['classic', 'modern', 'wood', 'marble'] as const).map(theme => (
-                    <button
-                      key={theme}
-                      onClick={() => onSettingsChange({ ...settings, boardTheme: theme })}
-                      className={`py-2 px-4 rounded-lg capitalize transition-all ${
-                        settings.boardTheme === theme
-                          ? 'bg-purple-500/40 border-2 border-purple-400'
-                          : 'bg-white/10 border-2 border-transparent hover:bg-white/20'
-                      } text-white`}
-                    >
-                      {theme}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+  const save = () => {
+    if (nameInvalid) return;
+    onSettingsChange({ ...draft, playerName: draft.playerName.trim().slice(0, 20) });
+    setSaved(true);
+  };
 
-            <button
-              onClick={onBack}
-              className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
-            >
-              Back to Menu
-            </button>
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-4">
+        <header className="px-1">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-100">Settings</h1>
+          <p className="text-sm text-zinc-500 mt-1">Personalize your board and profile.</p>
+        </header>
+
+        {/* Profile */}
+        <section className={card}>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Profile</h2>
+          <div>
+            <label htmlFor="playerName" className={`${label} block mb-2`}>
+              Display name
+            </label>
+            <input
+              id="playerName"
+              value={draft.playerName}
+              onChange={(e) => setDraft({ ...draft, playerName: e.target.value.slice(0, 20) })}
+              onKeyDown={(e) => { if (e.key === 'Enter') save(); }}
+              placeholder="Your name"
+              maxLength={20}
+              className={`${inputBase} ${nameInvalid ? 'border-red-500/60' : 'border-zinc-700'}`}
+            />
+            <p className="text-xs text-zinc-600 mt-1.5">
+              {nameInvalid ? 'Name cannot be empty.' : 'Shown in the menu and game header · up to 20 characters.'}
+            </p>
           </div>
+        </section>
+
+        {/* Gameplay */}
+        <section className={card}>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Gameplay</h2>
+          <div className="divide-y divide-zinc-800/70">
+            <Row title="Sound effects" hint="Move, capture and check sounds">
+              <Toggle on={draft.soundEnabled} onChange={(v) => setDraft({ ...draft, soundEnabled: v })} />
+            </Row>
+            <Row title="Show coordinates" hint="File and rank labels on the board">
+              <Toggle on={draft.showCoordinates} onChange={(v) => setDraft({ ...draft, showCoordinates: v })} />
+            </Row>
+            <Row title="Auto-flip board" hint="Rotate the view for the side to move (local play)">
+              <Toggle on={draft.autoFlipBoard} onChange={(v) => setDraft({ ...draft, autoFlipBoard: v })} />
+            </Row>
+            <Row title="Move quality" hint="Analysis panel after each move">
+              <Toggle on={draft.showMoveQuality} onChange={(v) => setDraft({ ...draft, showMoveQuality: v })} />
+            </Row>
+          </div>
+        </section>
+
+        {/* Appearance */}
+        <section className={card}>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Board theme</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {(['classic', 'modern', 'wood', 'marble'] as const).map((theme) => (
+              <button
+                key={theme}
+                onClick={() => setDraft({ ...draft, boardTheme: theme })}
+                className={`py-2 rounded-lg text-sm capitalize transition-colors border ${
+                  draft.boardTheme === theme
+                    ? 'border-zinc-400 bg-zinc-800 text-zinc-100'
+                    : 'border-zinc-800 bg-transparent text-zinc-400 hover:bg-zinc-800/50'
+                }`}
+              >
+                {theme}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Actions */}
+        <div className="space-y-2 pt-1">
+          <button
+            onClick={save}
+            disabled={!dirty || nameInvalid}
+            className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              dirty && !nameInvalid
+                ? 'bg-zinc-100 text-zinc-900 hover:bg-white'
+                : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+            }`}
+          >
+            {saved ? 'Saved ✓' : 'Save Changes'}
+          </button>
+          <button
+            onClick={onBack}
+            className="w-full py-2.5 rounded-lg text-sm font-medium text-zinc-400 border border-zinc-800 hover:bg-zinc-800/50 transition-colors"
+          >
+            Back to Menu
+          </button>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 html,
@@ -5,24 +6,18 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background-color: #1a1035;
+  background-color: #0a0a0b;
   overscroll-behavior: none;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #e4e4e7;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
-}
-
-/* Keyframes referenced by LiquidGlassBackground */
-@keyframes float-slow {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(-40px, 30px) scale(1.05); }
-  66%      { transform: translate(30px, -25px) scale(0.97); }
-}
-
-@keyframes float-slower {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(50px, -35px) scale(1.08); }
 }
 
 /* Thin scrollbars for the move list etc. */
@@ -31,7 +26,7 @@ body {
   height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
 }
 *::-webkit-scrollbar-track {
