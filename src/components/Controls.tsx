@@ -1,7 +1,7 @@
-import { Chess } from 'chess.js';
+import { memo } from 'react';
 
 interface ControlsProps {
-  game: Chess;
+  canUndo: boolean;
   onNewGame: () => void;
   onFlipBoard: () => void;
   onUndo: () => void;
@@ -9,9 +9,11 @@ interface ControlsProps {
   onOpenMenu: () => void;
 }
 
-export function Controls({ game, onNewGame, onFlipBoard, onUndo, onSurrender, onOpenMenu }: ControlsProps) {
+export const Controls = memo(function Controls({
+  canUndo, onNewGame, onFlipBoard, onUndo, onSurrender, onOpenMenu,
+}: ControlsProps) {
   return (
-    <div 
+    <div
       className="rounded-2xl p-4"
       style={{
         background: 'rgba(0,0,0,0.4)',
@@ -26,22 +28,22 @@ export function Controls({ game, onNewGame, onFlipBoard, onUndo, onSurrender, on
         >
           Menu
         </button>
-        
+
         <button
           onClick={onUndo}
-          disabled={game.history().length === 0}
+          disabled={!canUndo}
           className="py-3 px-4 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed border border-white/20 rounded-xl text-white font-medium transition-all"
         >
           Undo
         </button>
-        
+
         <button
           onClick={onFlipBoard}
           className="py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all"
         >
           Flip
         </button>
-        
+
         <button
           onClick={onSurrender}
           className="py-3 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-white font-medium transition-all"
@@ -51,4 +53,4 @@ export function Controls({ game, onNewGame, onFlipBoard, onUndo, onSurrender, on
       </div>
     </div>
   );
-}
+});

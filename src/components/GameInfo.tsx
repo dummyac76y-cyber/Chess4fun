@@ -1,4 +1,5 @@
-import { Chess } from 'chess.js';
+import { memo, useMemo } from 'react';
+import { Chess, Move } from 'chess.js';
 import { GameMode, TimeControl } from '../App';
 
 interface GameInfoProps {
@@ -9,21 +10,33 @@ interface GameInfoProps {
   timeControl: TimeControl;
 }
 
-export function GameInfo({ game, playerColor, moveHistory, gameMode, timeControl }: GameInfoProps) {
-  const turn = game.turn() === 'w' ? 'White' : 'Black';
-  const inCheck = game.inCheck();
-  const isGameOver = game.isGameOver();
-  
-  let status = `${turn} to move`;
-  if (inCheck) status = `${turn} in check!`;
-  if (game.isCheckmate()) status = `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins!`;
-  if (game.isDraw()) status = 'Draw!';
-  if (game.isStalemate()) status = 'Stalemate!';
-  if (game.isThreefoldRepetition()) status = 'Draw by repetition!';
-  if (game.isInsufficientMaterial()) status = 'Draw - insufficient material!';
+export const GameInfo = memo(function GameInfo({
+  game, moveHistory, gameMode, timeControl,
+}: GameInfoProps) {
+  const fen = game.fen();
+
+  const status = useMemo(() => {
+    const turn = game.turn() === 'w' ? 'White' : 'Black';
+    if (game.isCheckmate()) return `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins!`;
+    if (game.isStalemate()) return 'Stalemate!';
+    if (game.isThreefoldRepetition()) return 'Draw by repetition!';
+    if (game.isInsufficientMaterial()) return 'Draw - insufficient material!';
+    if (game.isDraw()) return 'Draw!';
+    if (game.inCheck()) return `${turn} in check!`;
+    return `${turn} to move`;
+  }, [game, fen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Group SAN moves into numbered pairs for display.
+  const movePairs = useMemo(() => {
+    const pairs: { number: number; white: string; black?: string }[] = [];
+    for (let i = 0; i < moveHistory.length; i += 2) {
+      pairs.push({ number: i / 2 + 1, white: moveHistory[i], black: moveHistory[i + 1] });
+    }
+    return pairs;
+  }, [moveHistory]);
 
   return (
-    <div 
+    <div
       className="rounded-2xl p-4 space-y-4"
       style={{
         background: 'rgba(0,0,0,0.4)',
@@ -50,13 +63,15 @@ export function GameInfo({ game, playerColor, moveHistory, gameMode, timeControl
       <div>
         <h3 className="text-white/70 text-sm font-semibold mb-2">Move History</h3>
         <div className="bg-white/5 rounded-lg p-3 max-h-48 overflow-y-auto">
-          {moveHistory.length === 0 ? (
+          {movePairs.length === 0 ? (
             <p className="text-white/40 text-sm italic">No moves yet</p>
           ) : (
-            <div className="grid grid-cols-2 gap-1">
-              {moveHistory.map((move, i) => (
-                <div key={i} className="text-white text-sm">
-                  {Math.floor(i / 2) + 1}{i % 2 === 0 ? '.' : '...'} {move}
+            <div className="space-y-1">
+              {movePairs.map(pair => (
+                <div key={pair.number} className="grid grid-cols-[2.5rem_1fr_1fr] text-white text-sm">
+                  <span className="text-white/50">{pair.number}.</span>
+                  <span>{pair.white}</span>
+                  <span>{pair.black ?? ''}</span>
                 </div>
               ))}
             </div>
@@ -65,4 +80,4 @@ export function GameInfo({ game, playerColor, moveHistory, gameMode, timeControl
       </div>
     </div>
   );
-}
+});
