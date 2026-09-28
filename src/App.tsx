@@ -67,6 +67,9 @@ export default function App() {
   const [, forceRender] = useState(0);
   const rerender = useCallback(() => forceRender(n => n + 1), []);
   const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
+  // Manual board-orientation override (Flip button). Online games always keep
+  // the local player's side at the bottom regardless of this flag.
+  const [boardFlipped, setBoardFlipped] = useState(false);
   const [settings, setSettings] = useState<GameSettings>(() => {
     try {
       const saved = localStorage.getItem('chessSettings');
@@ -86,6 +89,8 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
   const [resultModal, setResultModal] = useState<ResultModal | null>(null);
+  // Simulated online opponent (no backend): plays automatically after your moves.
+  const opponentTimerRef = useRef<number | null>(null);
 
   const clock = useGameClock(timeControl);
   const botTimerRef = useRef<number | null>(null);
@@ -100,9 +105,10 @@ export default function App() {
     localStorage.setItem('chessSettings', JSON.stringify(settings));
   }, [settings]);
 
-  // Cleanup pending bot timers on unmount.
+  // Cleanup pending bot/opponent timers on unmount.
   useEffect(() => () => {
     if (botTimerRef.current !== null) window.clearTimeout(botTimerRef.current);
+    if (opponentTimerRef.current !== null) window.clearTimeout(opponentTimerRef.current);
   }, []);
 
   const game = gameRef.current;
@@ -128,43 +134,6 @@ export default function App() {
     });
   }, []);
 
-  // Start new game.
-  const startGame = useCallback((mode: GameMode, opts?: { difficulty?: Difficulty; time?: TimeControl; playerColor?: 'white' | 'black' }) => {
-    if (botTimerRef.current !== null) {
-      window.clearTimeout(botTimerRef.current);
-      botTimerRef.current = null;
-    }
-    if (opts?.difficulty) setDifficulty(opts.difficulty);
-    const time = opts?.time ?? timeControl;
-    setTimeControl(time);
-
-    gameRef.current = new Chess();
-    setMoveHistory([]);
-    setAnalysis(null);
-    setResultModal(null);
-    setPendingPromotion(null);
-    gameOverProcessedRef.current = false;
-    clock.reset(time);
-    const color = opts?.playerColor ?? 'white';
-    setPlayerColor(color);
-    setGameMode(mode);
-    setScreen('game');
-
-    // If the bot plays White it opens the game and the clock starts with it.
-    if (mode === 'bot' && color === 'black') {
-      window.setTimeout(() => clock.start(), 600);
-    }
-  }, [clock, timeControl]);
-
-  const handleTimeControlSelect = useCallback((time: TimeControl) => {
-    startGame('bot', { difficulty, time });
-  }, [startGame, difficulty]);
-
-  const handleDifficultySelect = useCallback((diff: Difficulty) => {
-    setDifficulty(diff);
-    setScreen('timeControl');
-  }, []);
-
   const startMatchmaking = useCallback(() => {
     setScreen('matchmaking');
   }, []);
@@ -185,17 +154,88 @@ export default function App() {
     setAnalysis(prev => ({ score: prev?.score ?? 0, lastMove: san }));
   }, [clock, settings.soundEnabled, timeControl]);
 
-  // Bot move logic - minimax search scheduled after the player's move.
-  const makeBotMove = useCallback((difficultyLevel: Difficulty) => {
+  // Bot / remote-opponent reply logic - applied after the player's move.
+  const applyReplyMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
     const g = gameRef.current;
     if (g.isGameOver()) return;
-    const move = findBestMove(g.fen(), difficultyLevel);
-    if (!move) return;
     const applied = g.move({ from: move.from, to: move.to, promotion: move.promotion });
     if (!applied) return;
     afterMoveEffects(applied.san, !!applied.captured, g);
     rerender();
   }, [afterMoveEffects, rerender]);
+
+  /**
+   * Simulates the remote opponent in an online match (no backend available):
+   * replies with a real chess engine move after a short "network" delay so
+   * both players' moves stay visually synced on the shared board state.
+   */
+  const scheduleOpponentMove = useCallback(() => {
+    if (opponentTimerRef.current !== null) window.clearTimeout(opponentTimerRef.current);
+    opponentTimerRef.current = window.setTimeout(() => {
+      opponentTimerRef.current = null;
+      const g = gameRef.current;
+      if (g.isGameOver() || !g.moves().length) return;
+      const move = findBestMove(g.fen(), 'medium');
+      if (!move) return;
+      applyReplyMove(move);
+    }, 700 + Math.random() * 800);
+  }, [applyReplyMove]);
+
+  // Start new game.
+  const startGame = useCallback((mode: GameMode, opts?: { difficulty?: Difficulty; time?: TimeControl; playerColor?: 'white' | 'black' }) => {
+    if (botTimerRef.current !== null) {
+      window.clearTimeout(botTimerRef.current);
+      botTimerRef.current = null;
+    }
+    if (opponentTimerRef.current !== null) {
+      window.clearTimeout(opponentTimerRef.current);
+      opponentTimerRef.current = null;
+    }
+    if (opts?.difficulty) setDifficulty(opts.difficulty);
+    const time = opts?.time ?? timeControl;
+    setTimeControl(time);
+
+    gameRef.current = new Chess();
+    setMoveHistory([]);
+    setAnalysis(null);
+    setResultModal(null);
+    setPendingPromotion(null);
+    gameOverProcessedRef.current = false;
+    clock.reset(time);
+    const color = opts?.playerColor ?? 'white';
+    setPlayerColor(color);
+    setGameMode(mode);
+    // Online matches always show the local player's side at the bottom.
+    setBoardFlipped(false);
+    setScreen('game');
+
+    // If the bot plays White it opens the game and the clock starts with it.
+    if (mode === 'bot' && color === 'black') {
+      window.setTimeout(() => clock.start(), 600);
+    }
+    // Online: if the remote opponent was assigned White, they open the game.
+    if (mode === 'online' && color === 'black') {
+      scheduleOpponentMove();
+      window.setTimeout(() => clock.start(), 900);
+    }
+  }, [clock, timeControl, scheduleOpponentMove]);
+
+  const handleTimeControlSelect = useCallback((time: TimeControl) => {
+    startGame('bot', { difficulty, time });
+  }, [startGame, difficulty]);
+
+  const handleDifficultySelect = useCallback((diff: Difficulty) => {
+    setDifficulty(diff);
+    setScreen('timeControl');
+  }, []);
+
+  const makeBotMove = useCallback((difficultyLevel: Difficulty) => {
+    const g = gameRef.current;
+    if (g.isGameOver()) return;
+    const move = findBestMove(g.fen(), difficultyLevel);
+    if (!move) return;
+    applyReplyMove(move);
+  }, [applyReplyMove]);
 
   const scheduleBotMove = useCallback(() => {
     if (botTimerRef.current !== null) window.clearTimeout(botTimerRef.current);
@@ -230,11 +270,13 @@ export default function App() {
     afterMoveEffects(move.san, !!move.captured, g);
     rerender();
 
-    if (gameMode === 'bot' && !g.isGameOver() && g.turn() !== (playerColor === 'white' ? 'w' : 'b')) {
-      scheduleBotMove();
+    const myColor = playerColor === 'white' ? 'w' : 'b';
+    if ((gameMode === 'bot' || gameMode === 'online') && !g.isGameOver() && g.turn() !== myColor) {
+      if (gameMode === 'bot') scheduleBotMove();
+      else scheduleOpponentMove();
     }
     return true;
-  }, [afterMoveEffects, gameMode, pendingPromotion, playerColor, rerender, scheduleBotMove]);
+  }, [afterMoveEffects, gameMode, pendingPromotion, playerColor, rerender, scheduleBotMove, scheduleOpponentMove]);
 
   const handlePromotionSelect = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (!pendingPromotion) return;
@@ -444,10 +486,14 @@ export default function App() {
       window.clearTimeout(botTimerRef.current);
       botTimerRef.current = null;
     }
+    if (opponentTimerRef.current !== null) {
+      window.clearTimeout(opponentTimerRef.current);
+      opponentTimerRef.current = null;
+    }
     gameOverProcessedRef.current = false;
     setResultModal(null);
-    if (gameMode === 'bot') {
-      // Undo the bot reply together with the player's move when possible.
+    if (gameMode === 'bot' || gameMode === 'online') {
+      // Undo the bot/opponent reply together with the player's move when possible.
       g.undo();
       if (g.turn() !== (playerColor === 'white' ? 'w' : 'b')) g.undo();
     } else {
