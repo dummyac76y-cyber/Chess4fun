@@ -187,8 +187,8 @@ export const ChessBoard = memo(function ChessBoard({
         border: `1px solid ${active && clockRunning ? 'rgba(127,201,127,0.6)' : 'rgba(255,255,255,0.12)'}`,
       }}
     >
-      <span className="text-white/80 font-medium text-sm">{label}</span>
-      <span className={`font-mono text-lg font-bold ${time <= 30 && active ? 'text-red-400' : 'text-white'}`}>
+      <span className="text-zinc-300 font-medium text-sm">{label}</span>
+      <span className={`font-mono text-lg font-bold ${time <= 30 && active ? 'text-red-400' : 'text-zinc-100'}`}>
         {formatClock(time)}
       </span>
     </div>
@@ -198,13 +198,7 @@ export const ChessBoard = memo(function ChessBoard({
     <div className="relative w-full max-w-[600px] mx-auto">
       {clockBar(topLabel, topTime, topActive)}
       <div
-        className="relative rounded-2xl overflow-hidden shadow-2xl"
-        style={{
-          background: 'rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(25px)',
-          border: '1px solid rgba(255,255,255,0.15)',
-        }}
-      >
+        className="relative rounded-xl overflow-hidden shadow-2xl border border-zinc-800 bg-white/[0.03]">
         <div className="grid grid-cols-8 gap-0">
           {board.map((_, rowIndex) => [0, 1, 2, 3, 4, 5, 6, 7].map(colIndex => renderSquare(rowIndex, colIndex)))}
         </div>
@@ -212,14 +206,14 @@ export const ChessBoard = memo(function ChessBoard({
         {/* Promotion picker overlay */}
         {pendingPromotion && (
           <div className="absolute inset-0 z-20 bg-black/70 flex items-center justify-center">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 space-y-2">
-              <p className="text-white text-center font-semibold mb-2">Promote to:</p>
+            <div className="bg-zinc-800/60 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 space-y-2">
+              <p className="text-zinc-100 text-center font-semibold mb-2">Promote to:</p>
               <div className="flex gap-2">
                 {PROMOTION_OPTIONS.map(p => (
                   <button
                     key={p}
                     onClick={() => onPromotionSelect(p)}
-                    className="w-16 h-16 bg-white/10 hover:bg-white/30 border border-white/20 rounded-xl flex items-center justify-center transition-all"
+                    className="w-16 h-16 bg-zinc-800 hover:bg-zinc-700 border border-zinc-800 rounded-xl flex items-center justify-center transition-all"
                     aria-label={`Promote to ${p === 'q' ? 'queen' : p === 'r' ? 'rook' : p === 'b' ? 'bishop' : 'knight'}`}
                   >
                     <ChessPiece type={p} color={game.turn()} size={48} />
