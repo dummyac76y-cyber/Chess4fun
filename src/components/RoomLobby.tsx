@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createPrivateRoom, joinPrivateRoom, PrivateRoom } from '../lib/supabase';
+import { createPrivateRoom, joinPrivateRoom, normalizeAccessCode, PrivateRoom } from '../lib/supabase';
 
 interface RoomLobbyProps {
   onRoomJoined: (room: PrivateRoom, isHost: boolean, myColor: 'white' | 'black') => void;
@@ -27,14 +27,17 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
   };
 
   const handleJoin = async () => {
-    if (joinCode.trim().length === 0) {
+    // Normalize before validating so invisible/autocorrect characters can't
+    // make a correct code look empty or too short.
+    const cleanCode = normalizeAccessCode(joinCode);
+    if (cleanCode.length === 0) {
       setError('Please enter an access code.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const result = await joinPrivateRoom(joinCode);
+      const result = await joinPrivateRoom(cleanCode);
       onRoomJoined(result.room, false, result.myColor);
     } catch (err: any) {
       console.error('RoomLobby handleJoin error:', err);
@@ -140,9 +143,13 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
                   <input
                     type="text"
                     value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                    onChange={(e) => setJoinCode(normalizeAccessCode(e.target.value).slice(0, 6))}
                     placeholder="ENTER CODE"
                     maxLength={6}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
                     className="w-full py-4 px-6 bg-white/10 border border-white/20 rounded-xl text-white text-2xl font-bold text-center tracking-[0.3em] uppercase focus:outline-none focus:border-emerald-400/60 placeholder:text-white/30"
                     onKeyDown={(e) => { if (e.key === 'Enter') handleJoin(); }}
                   />
@@ -153,7 +160,7 @@ export function RoomLobby({ onRoomJoined, onBack }: RoomLobbyProps) {
                 <div className="space-y-3">
                   <button
                     onClick={handleJoin}
-                    disabled={loading || joinCode.length < 4}
+                    disabled={loading || normalizeAccessCode(joinCode).length < 4}
                     className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 hover:from-emerald-500/40 hover:to-teal-500/40 border border-white/20 rounded-xl text-white font-medium transition-all disabled:opacity-50"
                   >
                     {loading ? 'Joining...' : 'Join Room'}

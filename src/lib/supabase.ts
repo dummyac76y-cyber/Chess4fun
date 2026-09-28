@@ -37,6 +37,16 @@ export function generateAccessCode(): string {
   return code;
 }
 
+/**
+ * Normalizes an access code for comparison: strips every non-alphanumeric
+ * character (spaces, dashes, invisible/zero-width characters that can sneak in
+ * via autofill, autocorrect or copy-paste) and uppercases the result. Typed
+ * lowercase input is treated as identical to the uppercase code.
+ */
+export function normalizeAccessCode(code: string): string {
+  return code.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+}
+
 export interface PlayerStatsRecord {
   id: string;
   player_id: string;
@@ -239,7 +249,10 @@ export async function createPrivateRoom(hostColor: 'white' | 'black'): Promise<P
 }
 
 export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom; myColor: 'white' | 'black' }> {
-  const cleanCode = code.trim().toUpperCase();
+  // Normalize aggressively so that typed codes match stored codes regardless of
+  // case, stray spaces/dashes, or invisible characters (e.g. zero-width spaces
+  // introduced by mobile keyboards, autofill or copy-paste).
+  const cleanCode = normalizeAccessCode(code);
 
   if (!cleanCode) {
     console.error('[JoinRoom Error] Empty room code provided.');
@@ -249,12 +262,25 @@ export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom
   if (isSupabaseConfigured()) {
     console.log('[JoinRoom] Searching Supabase for access code:', cleanCode);
 
-    // Case-insensitive / normalized lookup on access_code
-    const { data: room, error: queryError } = await supabase
+    // Primary lookup: exact match on the normalized uppercase code.
+    let { data: room, error: queryError } = await supabase
       .from('chess_private_rooms')
       .select('*')
-      .ilike('access_code', cleanCode)
+      .eq('access_code', cleanCode)
       .maybeSingle();
+
+    // Fallback: case-insensitive match (ILIKE with all literals escaped) for
+    // rooms whose stored code differs in case from the canonical form.
+    if (!queryError && !room) {
+      const escaped = cleanCode.replace(/[%_\\]/g, '\\$&');
+      const retry = await supabase
+        .from('chess_private_rooms')
+        .select('*')
+        .ilike('access_code', escaped)
+        .maybeSingle();
+      room = retry.data;
+      queryError = retry.error;
+    }
 
     if (queryError) {
       console.error('[JoinRoom Failure] Database query error:', {
@@ -309,11 +335,11 @@ export async function joinPrivateRoom(code: string): Promise<{ room: PrivateRoom
   console.warn('[JoinRoom] Supabase environment variables not configured. Checking local storage rooms.');
   const rooms = getLocalRooms();
   const foundId = Object.keys(rooms).find(
-    (id) => rooms[id].access_code.trim().toUpperCase() === cleanCode
+    (id) => normalizeAccessCode(rooms[id].access_code) === cleanCode
   );
 
   if (!foundId) {
-    throw new Error(`Room with code "${cleanCode}" not found in local storage.`);
+    throw new Error(`Room with code "${cleanCode}" not found. Please double-check the code and try again.`);
   }
 
   const room = rooms[foundId];
