@@ -5,14 +5,11 @@ interface SettingsProps {
   settings: GameSettings;
   onSettingsChange: (settings: GameSettings) => void;
   onBack: () => void;
+  playerName: string;
+  onNameChange: (name: string) => void;
 }
 
-const card = 'rounded-2xl border border-zinc-800 bg-white/[0.03] p-5 space-y-5';
-const label = 'text-sm text-zinc-400';
-const inputBase =
-  'w-full px-4 py-2.5 rounded-lg bg-zinc-900 border text-sm text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-zinc-500';
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (next: boolean) => void }) {
   return (
     <button
       type="button"
@@ -49,11 +46,7 @@ export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) 
   const [draft, setDraft] = useState<GameSettings>(settings);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    if (!saved) return;
-    const t = window.setTimeout(() => setSaved(false), 2000);
-    return () => window.clearTimeout(t);
-  }, [saved]);
+
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   const nameInvalid = draft.playerName.trim().length === 0;

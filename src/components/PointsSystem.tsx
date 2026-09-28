@@ -4,9 +4,10 @@ interface PointsSystemProps {
   stats: PlayerStats;
   onBack: () => void;
   onReset: () => void;
+  playerName: string;
 }
 
-export function PointsSystem({ stats, onBack, onReset }: PointsSystemProps) {
+export function PointsSystem({ stats, onBack, onReset, playerName }: PointsSystemProps) {
   const winRate = stats.gamesPlayed > 0 ? ((stats.wins / stats.gamesPlayed) * 100).toFixed(1) : '0.0';
 
   return (

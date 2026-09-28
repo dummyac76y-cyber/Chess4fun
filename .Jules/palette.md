@@ -1,0 +1,3 @@
+## 2025-05-20 - Accessible Chess Board Grid Squares
+**Learning:** In interactive SVG/canvas/grid board games, using non-semantic `div`s for board squares completely excludes screen reader and keyboard users. Converting grid squares into semantic `<button>` elements with dynamic ARIA labels (e.g. "e4, white pawn, selected") and `pointer-events-none` on overlay elements creates complete keyboard and screen reader accessibility without interfering with click or drag events.
+**Action:** Always render interactive grid squares as semantic `<button>` elements with structured ARIA labels describing position, piece occupant, and state.
