@@ -1,4 +1,4 @@
-import { TimeControl } from '../App';
+import { TimeControl } from '../types';
 
 interface TimeControlSelectProps {
   onSelect: (time: TimeControl) => void;

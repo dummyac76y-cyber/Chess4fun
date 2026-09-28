@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { Chess, Move } from 'chess.js';
-import { GameMode, TimeControl } from '../App';
+import { GameMode, TimeControl } from '../types';
 
 interface GameInfoProps {
   game: Chess;

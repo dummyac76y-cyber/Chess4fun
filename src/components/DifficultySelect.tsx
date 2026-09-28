@@ -1,4 +1,4 @@
-import { Difficulty } from '../App';
+import { Difficulty } from '../types';
 
 interface DifficultySelectProps {
   onSelect: (difficulty: Difficulty) => void;

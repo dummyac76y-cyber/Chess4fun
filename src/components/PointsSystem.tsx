@@ -1,4 +1,4 @@
-import { PlayerStats } from '../App';
+import { PlayerStats } from '../types';
 
 interface PointsSystemProps {
   stats: PlayerStats;

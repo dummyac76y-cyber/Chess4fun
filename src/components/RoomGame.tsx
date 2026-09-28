@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess } from 'chess.js';
-import { supabase, isSupabaseConfigured, updatePrivateRoom, deletePrivateRoom, PrivateRoom } from '../lib/supabase';
+import {
+  supabase, isSupabaseConfigured, createPrivateRoom, joinPrivateRoom,
+  updatePrivateRoom, deletePrivateRoom, subscribeToRoom, PrivateRoom,
+} from '../lib/supabase';
+import { GameSettings } from '../types';
 import { ChessBoard } from './ChessBoard';
 import { Controls } from './Controls';
 import { GameInfo } from './GameInfo';
-import { GameSettings } from '../App';
 
 interface RoomGameProps {
   room: PrivateRoom;
@@ -14,17 +17,30 @@ interface RoomGameProps {
   onLeave: () => void;
 }
 
+/**
+ * Online private-room game.
+ *
+ * Sync model (works in production, across devices):
+ *  - Source of truth is the `chess_private_rooms` row in Supabase.
+ *  - Every move is written to the row; both clients receive updates through a
+ *    Realtime `postgres_changes` subscription AND an instant same-browser
+ *    BroadcastChannel listener, with a slow polling fallback so a dropped
+ *    websocket can never leave the two boards out of sync.
+ */
 export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameProps) {
   const [game, setGame] = useState(() => new Chess(room.fen));
   const [moveHistory, setMoveHistory] = useState<string[]>(
-    room.move_history ? room.move_history.split(',') : []
+    room.move_history ? room.move_history.split(',').filter(Boolean) : []
   );
-  const [roomStatus, setRoomStatus] = useState<'waiting' | 'active' | 'finished'>('active');
+  const [roomStatus, setRoomStatus] = useState<'waiting' | 'active' | 'finished'>(room.status);
   const [opponentLeft, setOpponentLeft] = useState(false);
   const isMyTurn = game.turn() === (myColor === 'white' ? 'w' : 'b');
+  // Refs so async callbacks always see the latest state without re-subscribing.
   const lastFenRef = useRef(room.fen);
+  const statusRef = useRef<'waiting' | 'active' | 'finished'>(room.status);
+  statusRef.current = roomStatus;
 
-  // Initialize from room data
+  // Re-initialize when a different room is opened.
   useEffect(() => {
     setRoomStatus(room.status);
     if (room.status === 'waiting') {
@@ -32,42 +48,37 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       setMoveHistory([]);
     } else {
       setGame(new Chess(room.fen));
-      setMoveHistory(room.move_history ? room.move_history.split(',') : []);
+      setMoveHistory(room.move_history ? room.move_history.split(',').filter(Boolean) : []);
     }
     lastFenRef.current = room.fen;
-  }, [room.id]);
+    setOpponentLeft(false);
+  }, [room.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply an incoming remote state (from realtime / broadcast / polling).
+  const applyRemoteState = useCallback(
+    (updated: { fen?: string; move_history?: string; status?: 'waiting' | 'active' | 'finished' }) => {
+      setRoomStatus((prev) => (updated.status && updated.status !== prev ? updated.status : prev));
+      if (updated.fen && updated.fen !== lastFenRef.current) {
+        lastFenRef.current = updated.fen;
+        try {
+          setGame(new Chess(updated.fen));
+        } catch {
+          /* ignore malformed FEN */
+        }
+        setMoveHistory(updated.move_history ? updated.move_history.split(',').filter(Boolean) : []);
+      }
+    },
+    []
+  );
 
   // Realtime subscription & BroadcastChannel setup for move updates
   useEffect(() => {
-    let supabaseChannel: any = null;
+    let unsubscribeRealtime: (() => void) | null = null;
     if (isSupabaseConfigured() && !room.is_local) {
-      console.log(`[RoomGame Realtime] Subscribing to room-${room.id}`);
-      supabaseChannel = supabase
-        .channel(`room-${room.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
-          (payload: any) => {
-            const updated = payload.new as PrivateRoom;
-            console.log('[RoomGame Realtime Update]', updated);
-            setRoomStatus(updated.status);
-            lastFenRef.current = updated.fen;
-            const incomingGame = new Chess(updated.fen);
-            setGame(incomingGame);
-            setMoveHistory(updated.move_history ? updated.move_history.split(',') : []);
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${room.id}` },
-          () => {
-            console.log('[RoomGame Realtime Delete] Room was deleted by host/opponent');
-            setOpponentLeft(true);
-          }
-        )
-        .subscribe((status: string, err?: any) => {
-          console.log(`[RoomGame Realtime Status] Subscription status: ${status}`, err || '');
-        });
+      unsubscribeRealtime = subscribeToRoom(room.id, {
+        onUpdate: (updated) => applyRemoteState(updated),
+        onDelete: () => setOpponentLeft(true),
+      });
     }
 
     let broadcastChannel: BroadcastChannel | null = null;
@@ -78,29 +89,20 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
         if (type === 'DELETE') {
           setOpponentLeft(true);
         } else if (type === 'UPDATE' && updatedRoom) {
-          setRoomStatus(updatedRoom.status);
-          lastFenRef.current = updatedRoom.fen;
-          const incomingGame = new Chess(updatedRoom.fen);
-          setGame(incomingGame);
-          setMoveHistory(updatedRoom.move_history ? updatedRoom.move_history.split(',') : []);
+          applyRemoteState(updatedRoom);
         }
       };
     }
 
     return () => {
-      if (supabaseChannel) {
-        supabase.removeChannel(supabaseChannel);
-      }
-      if (broadcastChannel) {
-        broadcastChannel.close();
-      }
+      if (unsubscribeRealtime) unsubscribeRealtime();
+      if (broadcastChannel) broadcastChannel.close();
     };
-  }, [room.id, room.is_local]);
+  }, [room.id, room.is_local, applyRemoteState]);
 
-  // Host/Client periodic polling fallback to guarantee status & move sync even if websocket drops
+  // Polling fallback guarantees status & move sync even if websockets drop.
   useEffect(() => {
-    const pollInterval = roomStatus === 'waiting' ? 1000 : 3000;
-    const poll = setInterval(async () => {
+    const pollInterval = setInterval(async () => {
       if (isSupabaseConfigured() && !room.is_local) {
         const { data, error } = await supabase
           .from('chess_private_rooms')
@@ -110,45 +112,29 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
 
         if (error) {
           console.error('[RoomGame Polling Error]', error);
-          return;
+        } else if (data) {
+          applyRemoteState(data);
         }
-
-        if (data) {
-          if (data.status !== roomStatus) {
-            setRoomStatus(data.status);
+      } else {
+        // Local/offline rooms live in localStorage; watch for cross-tab writes.
+        try {
+          const raw = localStorage.getItem('chess_local_private_rooms');
+          if (raw) {
+            const rooms = JSON.parse(raw);
+            if (rooms[room.id]) applyRemoteState(rooms[room.id]);
           }
-          if (data.fen !== lastFenRef.current) {
-            lastFenRef.current = data.fen;
-            setGame(new Chess(data.fen));
-            setMoveHistory(data.move_history ? data.move_history.split(',') : []);
-          }
+        } catch {
+          /* ignore */
         }
       }
-      try {
-        const raw = localStorage.getItem('chess_local_private_rooms');
-        if (raw) {
-          const rooms = JSON.parse(raw);
-          if (rooms[room.id]) {
-            const localR = rooms[room.id];
-            if (localR.status !== roomStatus) {
-              setRoomStatus(localR.status);
-            }
-            if (localR.fen !== lastFenRef.current) {
-              lastFenRef.current = localR.fen;
-              setGame(new Chess(localR.fen));
-              setMoveHistory(localR.move_history ? localR.move_history.split(',') : []);
-            }
-          }
-        }
-      } catch (e) {}
-    }, pollInterval);
+    }, 3000);
 
-    return () => clearInterval(poll);
-  }, [room.id, roomStatus, room.is_local]);
+    return () => clearInterval(pollInterval);
+  }, [room.id, room.is_local, applyRemoteState]);
 
   const handleMove = useCallback((from: string, to: string, promotion?: string) => {
-    // Only allow move if it's my turn and game is active
-    if (roomStatus !== 'active') return false;
+    // Only allow moves while the game is active and it's my turn.
+    if (statusRef.current !== 'active') return false;
     const currentTurn = game.turn();
     const myTurnChar = myColor === 'white' ? 'w' : 'b';
     if (currentTurn !== myTurnChar) return false;
@@ -165,6 +151,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       setMoveHistory(newHistory);
 
       const finalStatus = gameCopy.isGameOver() ? 'finished' : 'active';
+      if (finalStatus === 'finished') setRoomStatus('finished');
 
       updatePrivateRoom(room.id, {
         fen: newFen,
@@ -177,14 +164,30 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       console.error('Invalid move', e);
       return false;
     }
-  }, [game, roomStatus, myColor, moveHistory, room.id]);
+  }, [game, myColor, moveHistory, room.id]);
 
   const handleLeave = useCallback(() => {
     deletePrivateRoom(room.id);
     onLeave();
   }, [room.id, onLeave]);
 
+  // Surrender: mark the room finished for the opponent instead of deleting it,
+  // so they see a proper result rather than "opponent left".
+  const handleSurrender = useCallback(() => {
+    updatePrivateRoom(room.id, { status: 'finished' });
+    onLeave();
+  }, [room.id, onLeave]);
+
+  // Undo is only meaningful before the opponent has moved; keep it host-only
+  // and disabled once the game is finished.
+  const canUndo =
+    isHost &&
+    roomStatus === 'active' &&
+    moveHistory.length >= 2 &&
+    game.turn() === (myColor === 'white' ? 'w' : 'b');
+
   const handleUndo = useCallback(() => {
+    if (!canUndo) return;
     const gameCopy = new Chess(game.fen());
     gameCopy.undo();
     gameCopy.undo();
@@ -198,7 +201,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       fen: newFen,
       move_history: newHistory.join(','),
     });
-  }, [game, moveHistory, room.id]);
+  }, [canUndo, game, moveHistory, room.id]);
 
   // Waiting screen for host
   if (roomStatus === 'waiting') {
@@ -291,26 +294,40 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
                   </span>
                 </div>
                 <div className={`px-3 py-1 rounded-lg text-sm font-semibold ${
-                  isMyTurn ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-white/50'
+                  roomStatus === 'finished'
+                    ? 'bg-amber-500/30 text-amber-300'
+                    : isMyTurn ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-white/50'
                 }`}>
-                  {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
+                  {roomStatus === 'finished'
+                    ? (game.isCheckmate()
+                        ? `Checkmate – ${game.turn() === 'w' ? 'Black' : 'White'} wins`
+                        : 'Game over')
+                    : isMyTurn ? 'Your Turn' : "Opponent's Turn"}
                 </div>
               </div>
 
               <ChessBoard
                 game={game}
                 playerColor={myColor}
+                boardFlipped={false}
+                lockedToPlayerSide
+                gameMode="online"
                 onMove={handleMove}
                 settings={settings}
+                pendingPromotion={null}
+                onPromotionSelect={() => {}}
+                whiteTime={Infinity}
+                blackTime={Infinity}
+                clockRunning={false}
               />
 
               <Controls
-                game={game}
+                canUndo={canUndo}
                 onNewGame={handleLeave}
                 onFlipBoard={() => {}}
                 onUndo={handleUndo}
-                onSurrender={handleLeave}
-                onOpenMenu={() => {}}
+                onSurrender={handleSurrender}
+                onOpenMenu={onLeave}
               />
             </div>
 
@@ -329,3 +346,6 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     </div>
   );
 }
+
+// Keep the create/join helpers reachable from App without a second import site.
+export { createPrivateRoom, joinPrivateRoom };

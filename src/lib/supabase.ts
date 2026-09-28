@@ -1,9 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: { params: { eventsPerSecond: 10 } },
+});
 
 export const isSupabaseConfigured = (): boolean => {
   return (
@@ -394,4 +396,43 @@ export async function deletePrivateRoom(roomId: string): Promise<void> {
     saveLocalRooms(rooms);
     broadcastRoomUpdate(room, 'DELETE');
   }
+}
+
+/**
+ * Subscribes to realtime changes on a single room row. Returns an unsubscribe
+ * function. Requires `chess_private_rooms` to be added to the Supabase
+ * publication for realtime (see supabase/migrations).
+ */
+export function subscribeToRoom(
+  roomId: string,
+  handlers: {
+    onUpdate: (room: PrivateRoom) => void;
+    onDelete?: () => void;
+  }
+): () => void {
+  let channel: RealtimeChannel | null = null;
+  channel = supabase
+    .channel(`room-${roomId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${roomId}` },
+      (payload) => handlers.onUpdate(payload.new as PrivateRoom)
+    )
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'chess_private_rooms', filter: `id=eq.${roomId}` },
+      () => handlers.onDelete?.()
+    )
+    .subscribe((status) => {
+      if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+        console.warn(`[Realtime] Subscription for room ${roomId} is ${status}; polling fallback remains active.`);
+      }
+    });
+
+  return () => {
+    if (channel) {
+      supabase.removeChannel(channel);
+      channel = null;
+    }
+  };
 }
