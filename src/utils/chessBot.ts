@@ -1,5 +1,5 @@
 import { Chess, Move } from 'chess.js';
-import { Difficulty } from '../App';
+import { Difficulty } from '../types';
 
 const PIECE_VALUES: Record<string, number> = {
   p: 100,

@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
-import { GameSettings } from '../App';
+import { GameSettings } from '../types';
 
 interface SettingsProps {
   settings: GameSettings;
   onSettingsChange: (settings: GameSettings) => void;
   onBack: () => void;
-  playerName: string;
-  onNameChange: (name: string) => void;
+  playerName?: string;
+  onNameChange?: (name: string) => void;
 }
 
+const card =
+  'rounded-xl border border-zinc-800 bg-white/[0.03] p-4 space-y-4';
+const label = 'text-sm font-medium text-zinc-300';
+const inputBase =
+  'w-full px-3 py-2 rounded-lg bg-zinc-900/70 text-zinc-100 text-sm border focus:outline-none focus:border-zinc-500 transition-colors';
 
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       type="button"
@@ -46,7 +52,9 @@ export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) 
   const [draft, setDraft] = useState<GameSettings>(settings);
   const [saved, setSaved] = useState(false);
 
-
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   const nameInvalid = draft.playerName.trim().length === 0;

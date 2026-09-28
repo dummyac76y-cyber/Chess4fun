@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { TimeControl } from '../App';
+import { TimeControl } from '../types';
 
 export function timeControlToSeconds(tc: TimeControl): number | null {
   switch (tc) {

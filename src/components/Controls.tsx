@@ -13,7 +13,7 @@ const btn =
   'py-2.5 px-3 rounded-lg border text-sm font-medium transition-colors';
 
 export const Controls = memo(function Controls({
-  canUndo, onFlipBoard, onUndo, onSurrender, onOpenMenu,
+  canUndo, onNewGame, onFlipBoard, onUndo, onSurrender, onOpenMenu,
 }: ControlsProps) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-white/[0.03] p-3">
