@@ -300,12 +300,18 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
               <ChessBoard
                 game={game}
                 playerColor={myColor}
+                gameMode="online"
                 onMove={handleMove}
                 settings={settings}
+                pendingPromotion={null}
+                onPromotionSelect={() => undefined}
+                whiteTime={0}
+                blackTime={0}
+                clockRunning={false}
               />
 
               <Controls
-                game={game}
+                canUndo={false}
                 onNewGame={handleLeave}
                 onFlipBoard={() => {}}
                 onUndo={handleUndo}
