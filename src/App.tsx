@@ -10,6 +10,8 @@ import { LiquidGlassBackground } from './components/LiquidGlassBackground';
 import { GameMenu } from './components/GameMenu';
 import { TimeControlSelect } from './components/TimeControlSelect';
 import { DifficultySelect } from './components/DifficultySelect';
+import { RoomGame } from './components/RoomGame';
+import { createPrivateRoom, joinPrivateRoom, PrivateRoom } from './lib/supabase';
 import { findBestMove } from './utils/chessBot';
 import { playSound } from './utils/sound';
 import { useGameClock } from './hooks/useGameClock';
@@ -105,6 +107,8 @@ export default function App() {
   const [roomInput, setRoomInput] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
   const [roomNote, setRoomNote] = useState<string | null>(null);
+  const [privateRoom, setPrivateRoom] = useState<PrivateRoom | null>(null);
+  const [privateRoomColor, setPrivateRoomColor] = useState<'white' | 'black'>('white');
   const onlineColorRef = useRef<'white' | 'black'>('white');
   onlineColorRef.current = playerColor;
   const gameModeRef = useRef<GameMode>('bot');
@@ -366,11 +370,29 @@ export default function App() {
     }
   }, [afterMoveEffects, clock, difficulty, leaveRoom, postRoom, recordResult, rerender, resetOnlineGame, timeControl]);
 
-  const createRoom = useCallback(() => {
-    const code = makeRoomId();
-    joinRoom(code);
-    setRoomNote(`Room ${code} created – share the code so a friend can join from another tab.`);
-  }, [joinRoom]);
+  const createRoom = useCallback(async () => {
+    setRoomError(null);
+    setRoomNote(null);
+    try {
+      const room = await createPrivateRoom('white');
+      setPrivateRoom(room);
+      setPrivateRoomColor('white');
+      setScreen('game');
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : 'Unable to create the room.');
+    }
+  }, []);
+
+  const handleJoinPrivateRoom = useCallback(async (rawCode: string) => {
+    setRoomError(null);
+    try {
+      const result = await joinPrivateRoom(rawCode);
+      setPrivateRoom(result.room);
+      setPrivateRoomColor(result.myColor);
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : 'Unable to join the room.');
+    }
+  }, []);
 
   // Start new game.
   const startGame = useCallback((mode: GameMode, opts?: { difficulty?: Difficulty; time?: TimeControl; playerColor?: 'white' | 'black'; room?: string }) => {
@@ -678,9 +700,9 @@ export default function App() {
               <div className="text-center space-y-2">
                 <h2 className="text-xl font-semibold tracking-tight text-zinc-100">Private Room</h2>
                 <p className="text-sm text-zinc-500 leading-relaxed">
-                  Create a room, then open this app in a second browser tab and join with the same
+                  Create a room, then open this app on another device or browser and join with the same
                   code. One player gets White, the other Black — each sees their own pieces at the
-                  bottom and every move is synced live between the two tabs.
+                  bottom and every move is synced live through the online room.
                 </p>
               </div>
 
@@ -714,7 +736,7 @@ export default function App() {
                     <div className="flex-1 h-px bg-zinc-800" /> or join an existing room <div className="flex-1 h-px bg-zinc-800" />
                   </div>
 
-                  <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); joinRoom(roomInput); }}>
+                  <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void handleJoinPrivateRoom(roomInput); }}>
                     <input
                       value={roomInput}
                       onChange={(e) => setRoomInput(e.target.value.toUpperCase())}
@@ -794,6 +816,23 @@ export default function App() {
   }
 
   // ---- Game screen ----------------------------------------------------------
+
+  if (privateRoom && screen === 'game') {
+    return (
+      <RoomGame
+        room={privateRoom}
+        isHost={privateRoom.host_color === privateRoomColor}
+        myColor={privateRoomColor}
+        settings={settings}
+        onLeave={() => {
+          setPrivateRoom(null);
+          setRoomInput('');
+          setRoomError(null);
+          setScreen('menu');
+        }}
+      />
+    );
+  }
 
   const undoMove = () => {
     // Undoing is only fair against the bot or in local hot-seat PvP. In an
