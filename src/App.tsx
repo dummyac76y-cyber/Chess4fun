@@ -397,6 +397,10 @@ export default function App() {
     }
   }, [afterMoveEffects, clock, difficulty, leaveRoom, postRoom, recordResult, rerender, resetOnlineGame, timeControl]);
 
+  const handleRoomResult = useCallback((outcome: 'win' | 'loss' | 'draw') => {
+    recordResult(outcome, 'easy');
+  }, [recordResult]);
+
   const handleRandomMatch = useCallback((room: PrivateRoom, color: 'white' | 'black') => {
     setPrivateRoom(room);
     setPrivateRoomColor(color);
@@ -891,6 +895,7 @@ export default function App() {
         isHost={privateRoom.host_color === privateRoomColor}
         myColor={privateRoomColor}
         settings={settings}
+        onResult={handleRoomResult}
         onLeave={() => {
           setPrivateRoom(null);
           setRoomInput('');
