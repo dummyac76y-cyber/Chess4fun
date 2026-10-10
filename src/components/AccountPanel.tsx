@@ -70,7 +70,7 @@ export function AccountPanel() {
           setMessage('Account created. You’re all set — enjoy your game.');
           setPassword('');
         } else {
-          setMessage('Account request received. For username-only sign-in, email confirmation must be disabled in Supabase Auth settings.');
+          setMessage('Supabase created the account but did not sign you in. This app uses username-only accounts, so email confirmation must be OFF in Supabase Dashboard → Authentication → Providers → Email. Then try signing up again.');
         }
       } else {
         const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -87,7 +87,16 @@ export function AccountPanel() {
       }
     } catch (err) {
       const text = err instanceof Error ? err.message : 'Could not complete sign in.';
-      setError(text.toLowerCase().includes('fetch') ? 'Could not reach the account server. Check your connection and try again.' : text);
+      const lower = text.toLowerCase();
+      if (lower.includes('fetch') || lower.includes('failed to fetch')) {
+        setError('Could not reach Supabase. Check that Vercel has the correct VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY), then redeploy.');
+      } else if (lower.includes('email not confirmed')) {
+        setError('This account is waiting for email confirmation. Username-only accounts require Email confirmation to be disabled in Supabase Dashboard → Authentication → Providers → Email.');
+      } else if (lower.includes('user already registered')) {
+        setError('That username is already registered. Switch to Sign in, or choose a different username.');
+      } else {
+        setError(text);
+      }
     } finally {
       setBusy(false);
     }
