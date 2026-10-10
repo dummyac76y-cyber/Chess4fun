@@ -21,6 +21,7 @@ interface ChessBoardProps {
   clockRunning: boolean;
   /** Local player's side label for online games ("You" / "Opponent"). */
   opponentLabel?: string;
+  suggestedMove?: { from: string; to: string } | null;
 }
 
 const THEME_COLORS = {
@@ -34,7 +35,7 @@ const PROMOTION_OPTIONS = ['q', 'r', 'b', 'n'] as const;
 
 export const ChessBoard = memo(function ChessBoard({
   game, playerColor, boardFlipped, lockedToPlayerSide, gameMode, onMove, settings,
-  pendingPromotion, onPromotionSelect, whiteTime, blackTime, clockRunning,
+  pendingPromotion, onPromotionSelect, whiteTime, blackTime, clockRunning, suggestedMove,
 }: ChessBoardProps) {
   const board = game.board();
   // Online / bot: the local player's side always sits at the bottom so each
@@ -123,6 +124,7 @@ export const ChessBoard = memo(function ChessBoard({
       bgColor = '#7fc97f';
     }
     const isTarget = validTargets.has(square);
+    const isSuggested = suggestedMove?.from === square || suggestedMove?.to === square;
     const isCheckSq = inCheckSquare === square;
 
     return (
@@ -135,9 +137,12 @@ export const ChessBoard = memo(function ChessBoard({
         aria-label={`Square ${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ' empty'}`}
       >
         {piece && (
-          <div className="z-10 transition-transform hover:scale-110 w-full h-full flex items-center justify-center">
-            <ChessPiece type={piece.type} color={piece.color} size={50} />
+          <div className={`z-10 chess-board-piece w-full h-full flex items-center justify-center ${lastMove?.to === square ? 'chess-piece-arrive' : ''}`}>
+            <ChessPiece type={piece.type} color={piece.color} size={40} />
           </div>
+        )}
+        {isSuggested && (
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(80, 190, 255, .24)', boxShadow: 'inset 0 0 0 3px rgba(80,190,255,.85)' }} />
         )}
         {/* Check highlight */}
         {isCheckSq && (
