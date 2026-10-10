@@ -6,7 +6,7 @@ import { Difficulty } from '../App';
 
 interface AnalysisProps {
   game: Chess;
-  analysis: { score: number; lastMove: string | null } | null;
+  analysis: { score: number; lastMove: string | null; quality?: string; qualityLoss?: number } | null;
   enabled: boolean;
   onBestMove: (move: { from: string; to: string } | null) => void;
 }
@@ -121,6 +121,7 @@ export function Analysis({ game, analysis, enabled, onBestMove }: AnalysisProps)
         </div>
       )}
       {analysis?.lastMove && <p className="analysis-last-move">Last move played: <strong>{analysis.lastMove}</strong></p>}
+      {analysis?.quality && <div className={`analysis-quality analysis-quality-${analysis.quality.toLowerCase()}`}><span>{analysis.quality}</span><small>Estimated loss: {analysis.qualityLoss ?? 0} cp · quick local review</small></div>}
       <p className="analysis-footnote">Evaluations are local estimates. Candidate bars are one-ply material/position scores; the recommended move uses deeper search.</p>
     </section>
   );
