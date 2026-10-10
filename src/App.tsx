@@ -494,7 +494,7 @@ export default function App() {
     if (pendingPromotion) setPendingPromotion(null);
     afterMoveEffects(move.san, !!move.captured, g);
     if (gameMode !== 'online') {
-      const quality = classifyMoveQuality(beforeFen, from, to, promotion ?? 'q');
+      const quality = classifyMoveQuality(beforeFen, from, to, promotion);
       setAnalysis(prev => ({ score: prev?.score ?? 0, lastMove: move!.san, quality: quality.label, qualityLoss: quality.lossCp }));
     }
     rerender();
