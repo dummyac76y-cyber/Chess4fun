@@ -93,7 +93,7 @@ html,body{margin:0;padding:0;min-height:100%;background:#101310;overscroll-behav
 
 
 /* Full statistics dashboard */
-.stats-screen{min-height:100vh;background:radial-gradient(ellipse at 8% 0%,rgba(142,177,98,.12),transparent 36%),#101310;color:#f5f7f0;padding:24px clamp(14px,4vw,42px) 42px}
+.stats-screen{position:relative;z-index:10;min-height:100vh;background:radial-gradient(ellipse at 8% 0%,rgba(142,177,98,.12),transparent 36%),#101310;color:#f5f7f0;padding:24px clamp(14px,4vw,42px) 42px}
 .stats-wrap{max-width:1120px;margin:0 auto}.stats-topbar{display:flex;align-items:center;justify-content:space-between;padding:3px 0 25px;border-bottom:1px solid rgba(226,238,218,.1)}
 .stats-back{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(226,238,218,.13);border-radius:11px;padding:10px 13px;color:#e3eadc;background:rgba(255,255,255,.035);font-size:12px;cursor:pointer}.stats-back:hover{background:rgba(255,255,255,.08)}
 .stats-brand{display:flex;align-items:center;gap:7px;font-weight:800;letter-spacing:.06em;font-size:12px;color:#eef4e7}.stats-brand svg,.stats-brand span{color:#c7f36b}
@@ -162,3 +162,9 @@ html,body{margin:0;padding:0;min-height:100%;background:#101310;overscroll-behav
 .analysis-quality>span{font-size:11px;font-weight:800}
 .analysis-quality small{font-size:9px;color:#aab5a2;text-align:right}
 .analysis-quality-excellent>span{color:#b9f58b}.analysis-quality-good>span{color:#d8e8bd}.analysis-quality-inaccuracy>span{color:#f3d17d}.analysis-quality-mistake>span{color:#ffad70}.analysis-quality-blunder>span{color:#ff8585}
+
+
+/* Keep decorative backdrops below all screen content, including settings and stats. */
+html,body,#root{min-height:100%;background:#0a0a0b}
+body{color:#f4f6f0}
+.stats-screen,.stats-screen *{visibility:visible}
