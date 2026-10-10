@@ -69,6 +69,18 @@ export function PointsSystem({ stats, onBack, onReset, playerName }: PointsSyste
           </section>
           <section className="stats-chart-card leaderboard-card">
             <div className="stats-card-heading"><div><span className="stats-eyebrow">GLOBAL STANDINGS</span><h2>Leaderboard</h2></div><Trophy size={20} className="leader-trophy" /></div>
+            {leaderboardState === 'ready' && leaders[0] && (
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 mb-3">
+                <span className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">All-time global points leader</span>
+                <div className="flex items-end justify-between gap-3 mt-1">
+                  <div className="min-w-0">
+                    <strong className="block text-zinc-100 truncate">{leaders[0].display_name || 'Player'}</strong>
+                    <span className="text-xs text-zinc-500">Highest score across all saved players</span>
+                  </div>
+                  <strong className="text-xl text-emerald-300 whitespace-nowrap">{leaders[0].points.toLocaleString()} <span className="text-xs font-medium">pts</span></strong>
+                </div>
+              </div>
+            )}
             {leaderboardState === 'loading' && <div className="leader-state"><RefreshCw size={16} className="spin-icon" /> Loading rankings…</div>}
             {leaderboardState === 'error' && <div className="leader-state">Leaderboard is unavailable right now. Your personal stats are still saved on this device.</div>}
             {leaderboardState === 'empty' && <div className="leader-state">No ranked players yet. Be one of the first to put points on the board.</div>}
