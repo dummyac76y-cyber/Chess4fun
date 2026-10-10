@@ -681,7 +681,7 @@ export default function App() {
               <button onClick={() => startGame('pvp', { time: 'unlimited' })} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Pass & play</strong><span>Two players, one device</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
               <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Sparkles size={21} /></span><span className="lobby-action-copy"><strong>Invite a friend</strong><span>Create or join an online room</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
               <div className="lobby-secondary-grid">
-                <button onClick={() => setScreen('stats')} className="lobby-secondary"><ChartNoAxesColumn size={16} /> Your progress</button>
+                <button onClick={() => setScreen('stats')} className="lobby-secondary"><BarChart3 size={16} /> Your progress</button>
                 <button onClick={() => setScreen('settings')} className="lobby-secondary"><Settings2 size={16} /> Preferences</button>
               </div>
               <AccountPanel />
