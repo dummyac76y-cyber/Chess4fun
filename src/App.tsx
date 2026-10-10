@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
-import { ArrowRight, ChartNoAxesColumn, Crown, Settings2, Sparkles, Swords, UsersRound } from 'lucide-react';
+import { ArrowRight, BarChart3, Crown, Settings2, Sparkles, Swords, UsersRound } from 'lucide-react';
 import { AccountPanel } from './components/AccountPanel';
 import { ChessBoard } from './components/ChessBoard';
 import { GameInfo } from './components/GameInfo';
