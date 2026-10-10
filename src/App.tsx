@@ -741,7 +741,8 @@ export default function App() {
               <div className="game-menu-heading"><div><span className="lobby-kicker">THE BOARD IS YOURS</span><h2>Start a game</h2></div><span className="live-chess-mark">♟</span></div>
               <button onClick={() => setScreen('difficulty')} className="lobby-action"><span className="lobby-action-icon"><Swords size={21} /></span><span className="lobby-action-copy"><strong>Play vs. computer</strong><span>Choose your difficulty</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
               <button onClick={() => startGame('pvp', { time: 'unlimited' })} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Local multiplayer</strong><span>Two players · one device</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
-              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Crown size={21} /></span><span className="lobby-action-copy"><strong>Online room</strong><span>Play with a friend</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Crown size={21} /></span><span className="lobby-action-copy"><strong>Find players online</strong><span>Ranked matchmaking · Play against a real player</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Play with a friend</strong><span>Create or join a private room with a code</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
               <div className="lobby-secondary-grid">
                 <button onClick={() => setScreen('stats')} className="lobby-secondary"><BarChart3 size={16} /> Statistics</button>
                 <button onClick={() => setScreen('settings')} className="lobby-secondary"><Settings2 size={16} /> Game settings</button>
@@ -763,11 +764,12 @@ export default function App() {
           <div className="w-full max-w-md">
             <div className={panel}>
               <div className="text-center space-y-2">
-                <h2 className="text-xl font-semibold tracking-tight text-zinc-100">Private Room</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-zinc-100">Online Play</h2>
                 <p className="text-sm text-zinc-500 leading-relaxed">
-                  Create a room, then open this app on another device or browser and join with the same
-                  code. One player gets White, the other Black — each sees their own pieces at the
-                  bottom and every move is synced live through the online room.
+                  <strong className="text-emerald-300">Ranked matchmaking:</strong> search for another player online.
+                  If no one is waiting, keep this screen open while another player joins.
+                  <br /><br />
+                  <strong className="text-zinc-200">Private rooms:</strong> create a room or enter a friend’s room code below.
                 </p>
               </div>
 
