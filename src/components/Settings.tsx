@@ -66,7 +66,7 @@ export function Settings({ settings, onSettingsChange, onBack }: SettingsProps) 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
+      <div className="relative z-10 w-full max-w-md space-y-4">
         <header className="px-1">
           <h1 className="text-xl font-semibold tracking-tight text-zinc-100">Settings</h1>
           <p className="text-sm text-zinc-500 mt-1">Personalize your board and profile.</p>
