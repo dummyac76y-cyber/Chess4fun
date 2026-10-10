@@ -184,7 +184,7 @@ export function findBestMove(fen: string, difficulty: Difficulty): Move | null {
     }
   }
 
-  const depth = difficulty === 'hard' ? 3 : 2;
+  const depth = difficulty === 'hard' ? 4 : 3;
   const colorIsWhite = game.turn() === 'w';
 
   let bestScore = -Infinity;
