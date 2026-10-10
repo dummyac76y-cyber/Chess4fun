@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
+import { ArrowRight, ChartNoAxesColumn, Crown, Settings2, Sparkles, Swords, UsersRound } from 'lucide-react';
+import { AccountPanel } from './components/AccountPanel';
 import { ChessBoard } from './components/ChessBoard';
 import { GameInfo } from './components/GameInfo';
 import { Controls } from './components/Controls';
@@ -658,33 +660,34 @@ export default function App() {
 
   if (screen === 'menu') {
     return (
-      <div className="relative min-h-screen">
-        <LiquidGlassBackground />
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm space-y-8">
-            <header className="text-center">
-              <h1 className="text-4xl font-semibold tracking-tight text-zinc-100">Chess</h1>
-              <p className="text-sm text-zinc-500 mt-2">
-                {settings.playerName} · {stats.points} pts · Rank {Math.floor(stats.points / 100)}
-              </p>
-            </header>
-
-            <div className="space-y-2.5">
-              <button onClick={() => setScreen('difficulty')} className={primaryButton}>
-                Play vs Bot
-              </button>
-              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className={secondaryButton}>
-                Local 2 Player
-              </button>
-              <button onClick={startMatchmaking} className={secondaryButton}>
-                Private Room
-              </button>
-              <div className="grid grid-cols-2 gap-2.5 pt-2">
-                <button onClick={() => setScreen('stats')} className={ghostButton}>Statistics</button>
-                <button onClick={() => setScreen('settings')} className={ghostButton}>Settings</button>
+      <div className="chess-lobby">
+        <div className="lobby-shell">
+          <nav className="lobby-nav">
+            <div className="lobby-brand"><span className="lobby-brand-mark"><Crown size={23} /></span><span>chess<span style={{ color: '#c7f36b' }}>.</span>club</span></div>
+            <span className="lobby-pill"><span className="lobby-dot" /> Your quiet corner to play</span>
+          </nav>
+          <main className="lobby-grid">
+            <section>
+              <div className="lobby-kicker"><Sparkles size={15} /> MAKE YOUR NEXT MOVE</div>
+              <h1 className="lobby-title">A little focus.<br />A little <em>fun.</em></h1>
+              <p className="lobby-description">Slow down, find your rhythm, and enjoy a good game of chess. Play a thoughtful match against the bot, challenge someone beside you, or invite a friend online.</p>
+              <div className="lobby-stats">
+                <div><strong>{stats.gamesPlayed}</strong>Games played</div><div><strong>{stats.wins}</strong>Wins so far</div><div><strong>{stats.points}</strong>Points earned</div>
               </div>
-            </div>
-          </div>
+            </section>
+            <section className="lobby-panel">
+              <h2>Ready when you are.</h2><p className="lobby-panel-subtitle">Choose your pace. There’s no rush.</p>
+              <button onClick={() => setScreen('difficulty')} className="lobby-action"><span className="lobby-action-icon"><Swords size={21} /></span><span className="lobby-action-copy"><strong>Play the computer</strong><span>Practice at your own pace</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Pass & play</strong><span>Two players, one device</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Sparkles size={21} /></span><span className="lobby-action-copy"><strong>Invite a friend</strong><span>Create or join an online room</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <div className="lobby-secondary-grid">
+                <button onClick={() => setScreen('stats')} className="lobby-secondary"><ChartNoAxesColumn size={16} /> Your progress</button>
+                <button onClick={() => setScreen('settings')} className="lobby-secondary"><Settings2 size={16} /> Preferences</button>
+              </div>
+              <AccountPanel />
+            </section>
+          </main>
+          <footer className="lobby-footer"><span>♟ Made for the love of the game.</span><span>{settings.playerName} · Rank {Math.floor(stats.points / 100)}</span></footer>
         </div>
       </div>
     );
