@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LoaderCircle, Search, Users, X } from 'lucide-react';
+import { Loader2, Search, Users, X } from 'lucide-react';
 import { PrivateRoom, cancelRandomMatchmaking, findRandomOpponent, getOrCreatePlayerId } from '../lib/supabase';
 
 interface RandomMatchmakingProps {
@@ -68,7 +68,7 @@ export function RandomMatchmaking({ playerName, onMatch }: RandomMatchmakingProp
 
       {searching ? (
         <div className="rounded-lg border border-zinc-700 bg-black/20 px-3 py-3 flex items-center gap-3">
-          <LoaderCircle size={18} className="text-emerald-300 animate-spin shrink-0" />
+          <Loader2 size={18} className="text-emerald-300 animate-spin shrink-0" />
           <div className="flex-1">
             <p className="text-sm text-zinc-100 font-medium">Searching for an opponent…</p>
             <p className="text-xs text-zinc-500">Keep this page open. You’ll be matched automatically.</p>
