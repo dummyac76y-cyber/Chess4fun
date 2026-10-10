@@ -96,6 +96,7 @@ export default function App() {
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<{ score: number; lastMove: string | null } | null>(null);
+  const [suggestedMove, setSuggestedMove] = useState<{ from: string; to: string } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
   const [resultModal, setResultModal] = useState<ResultModal | null>(null);
