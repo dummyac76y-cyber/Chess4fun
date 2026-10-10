@@ -667,22 +667,42 @@ export default function App() {
             <span className="lobby-pill"><span className="lobby-dot" /> Your quiet corner to play</span>
           </nav>
           <main className="lobby-grid">
-            <section>
-              <div className="lobby-kicker"><Sparkles size={15} /> MAKE YOUR NEXT MOVE</div>
-              <h1 className="lobby-title">A little focus.<br />A little <em>fun.</em></h1>
-              <p className="lobby-description">Slow down, find your rhythm, and enjoy a good game of chess. Play a thoughtful match against the bot, challenge someone beside you, or invite a friend online.</p>
-              <div className="lobby-stats">
-                <div><strong>{stats.gamesPlayed}</strong>Games played</div><div><strong>{stats.wins}</strong>Wins so far</div><div><strong>{stats.points}</strong>Points earned</div>
+            <section className="lobby-showcase">
+              <div className="lobby-kicker"><Sparkles size={15} /> CHESS · PLAY · REPEAT</div>
+              <h1 className="lobby-title">Your move.<br /><em>Your game.</em></h1>
+              <div className="piece-stage" aria-label="Floating three-dimensional chess pieces">
+                <div className="piece-stage-glow" />
+                <span className="float-piece piece-king" aria-hidden="true">♔</span>
+                <span className="float-piece piece-queen" aria-hidden="true">♛</span>
+                <span className="float-piece piece-knight" aria-hidden="true">♞</span>
+                <span className="float-piece piece-rook" aria-hidden="true">♜</span>
+                <span className="float-piece piece-bishop" aria-hidden="true">♗</span>
+                <span className="float-piece piece-pawn" aria-hidden="true">♟</span>
+                <span className="piece-stage-caption">PICK YOUR SIDE <span>✦</span> MAKE IT COUNT</span>
+              </div>
+              <div className="quick-stats">
+                <div className="quick-stat"><span>Games</span><strong>{stats.gamesPlayed}</strong><small>played</small></div>
+                <div className="quick-stat"><span>Win rate</span><strong>{stats.gamesPlayed ? Math.round(stats.wins / stats.gamesPlayed * 100) : 0}%</strong><small>career</small></div>
+                <div className="quick-stat"><span>Points</span><strong>{stats.points}</strong><small>earned</small></div>
+              </div>
+              <div className="mini-performance">
+                <div className="mini-performance-heading"><strong>Match record</strong><button onClick={() => setScreen('stats')}>Full stats <ArrowRight size={13} /></button></div>
+                <div className="record-bars" aria-label={`Wins ${stats.wins}, draws ${stats.draws}, losses ${stats.losses}`}>
+                  <span className="record-win" style={{ width: `${stats.gamesPlayed ? stats.wins / stats.gamesPlayed * 100 : 0}%` }} />
+                  <span className="record-draw" style={{ width: `${stats.gamesPlayed ? stats.draws / stats.gamesPlayed * 100 : 0}%` }} />
+                  <span className="record-loss" style={{ width: `${stats.gamesPlayed ? stats.losses / stats.gamesPlayed * 100 : 0}%` }} />
+                </div>
+                <div className="record-legend"><span><i className="legend-win" /> Wins {stats.wins}</span><span><i className="legend-draw" /> Draws {stats.draws}</span><span><i className="legend-loss" /> Losses {stats.losses}</span></div>
               </div>
             </section>
             <section className="lobby-panel">
-              <h2>Ready when you are.</h2><p className="lobby-panel-subtitle">Choose your pace. There’s no rush.</p>
-              <button onClick={() => setScreen('difficulty')} className="lobby-action"><span className="lobby-action-icon"><Swords size={21} /></span><span className="lobby-action-copy"><strong>Play the computer</strong><span>Practice at your own pace</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
-              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Pass & play</strong><span>Two players, one device</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
-              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Sparkles size={21} /></span><span className="lobby-action-copy"><strong>Invite a friend</strong><span>Create or join an online room</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <div className="game-menu-heading"><div><span className="lobby-kicker">THE BOARD IS YOURS</span><h2>Start a game</h2></div><span className="live-chess-mark">♟</span></div>
+              <button onClick={() => setScreen('difficulty')} className="lobby-action"><span className="lobby-action-icon"><Swords size={21} /></span><span className="lobby-action-copy"><strong>Play vs. computer</strong><span>Choose your difficulty</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={() => startGame('pvp', { time: 'unlimited' })} className="lobby-action"><span className="lobby-action-icon"><UsersRound size={21} /></span><span className="lobby-action-copy"><strong>Local multiplayer</strong><span>Two players · one device</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
+              <button onClick={startMatchmaking} className="lobby-action"><span className="lobby-action-icon"><Crown size={21} /></span><span className="lobby-action-copy"><strong>Online room</strong><span>Play with a friend</span></span><ArrowRight className="lobby-action-arrow" size={18} /></button>
               <div className="lobby-secondary-grid">
-                <button onClick={() => setScreen('stats')} className="lobby-secondary"><BarChart3 size={16} /> Your progress</button>
-                <button onClick={() => setScreen('settings')} className="lobby-secondary"><Settings2 size={16} /> Preferences</button>
+                <button onClick={() => setScreen('stats')} className="lobby-secondary"><BarChart3 size={16} /> Statistics</button>
+                <button onClick={() => setScreen('settings')} className="lobby-secondary"><Settings2 size={16} /> Game settings</button>
               </div>
               <AccountPanel />
             </section>
