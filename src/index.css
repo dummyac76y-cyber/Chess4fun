@@ -157,3 +157,8 @@ html,body{margin:0;padding:0;min-height:100%;background:#101310;overscroll-behav
 .analysis-spin{animation:spin 1s linear infinite}
 @media(max-width:640px){.analysis-panel{padding:14px}.analysis-score-row strong{font-size:24px}.analysis-candidate{grid-template-columns:16px 36px minmax(25px,1fr) 32px;gap:6px}.analysis-subheading small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.chess-piece-arrive,.chess-board-piece,.chess-piece-glyph,.analysis-white-advantage{animation:none!important;transition:none!important}}
+
+.analysis-quality{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.025)}
+.analysis-quality>span{font-size:11px;font-weight:800}
+.analysis-quality small{font-size:9px;color:#aab5a2;text-align:right}
+.analysis-quality-excellent>span{color:#b9f58b}.analysis-quality-good>span{color:#d8e8bd}.analysis-quality-inaccuracy>span{color:#f3d17d}.analysis-quality-mistake>span{color:#ffad70}.analysis-quality-blunder>span{color:#ff8585}
