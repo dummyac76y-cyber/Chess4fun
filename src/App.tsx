@@ -13,6 +13,7 @@ import { GameMenu } from './components/GameMenu';
 import { TimeControlSelect } from './components/TimeControlSelect';
 import { DifficultySelect } from './components/DifficultySelect';
 import { RoomGame } from './components/RoomGame';
+import { RandomMatchmaking } from './components/RandomMatchmaking';
 import { createPrivateRoom, ensureGuestPlayer, getOrCreatePlayerId, setPlayerName, upsertPlayerStats, joinPrivateRoom, PrivateRoom } from './lib/supabase';
 import { classifyMoveQuality, findBestMove } from './utils/chessBot';
 import { playSound } from './utils/sound';
@@ -396,6 +397,14 @@ export default function App() {
     }
   }, [afterMoveEffects, clock, difficulty, leaveRoom, postRoom, recordResult, rerender, resetOnlineGame, timeControl]);
 
+  const handleRandomMatch = useCallback((room: PrivateRoom, color: 'white' | 'black') => {
+    setPrivateRoom(room);
+    setPrivateRoomColor(color);
+    setRoomError(null);
+    setRoomNote('Matched with a random online player.');
+    setScreen('game');
+  }, []);
+
   const createRoom = useCallback(async () => {
     setRoomError(null);
     setRoomNote(null);
@@ -756,6 +765,12 @@ export default function App() {
                   code. One player gets White, the other Black — each sees their own pieces at the
                   bottom and every move is synced live through the online room.
                 </p>
+              </div>
+
+              <RandomMatchmaking playerName={settings.playerName} onMatch={handleRandomMatch} />
+
+              <div className="flex items-center gap-3 text-zinc-600 text-xs">
+                <div className="flex-1 h-px bg-zinc-800" /> or play with a friend <div className="flex-1 h-px bg-zinc-800" />
               </div>
 
               {onlineRoom ? (
