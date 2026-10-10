@@ -24,9 +24,9 @@ export const ChessPiece = memo(function ChessPiece({ type, color, size = 60 }: C
       aria-label={`${isWhite ? 'White' : 'Black'} ${piece.label}`}
       role="img"
       className={`chess-piece-glyph ${isWhite ? 'chess-piece-white' : 'chess-piece-black'}`}
-      style={{ fontSize: `${size * 0.91}px` }}
+      style={{ fontSize: `${size * 0.76}px` }}
     >
-      {isWhite ? piece.white : piece.black}
+      {piece.black}
     </span>
   );
 });
