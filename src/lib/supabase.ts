@@ -128,6 +128,34 @@ export async function upsertPlayerStats(
   return data as PlayerStatsRecord;
 }
 
+
+export interface RandomMatchmakingResult {
+  status: 'waiting' | 'matched';
+  room?: PrivateRoom;
+  my_color?: 'white' | 'black';
+}
+
+export async function findRandomOpponent(playerId: string, displayName: string): Promise<RandomMatchmakingResult> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Online matchmaking requires the Chess4fun Supabase configuration.');
+  }
+  await ensureGuestPlayer(playerId, displayName);
+  const { data, error } = await supabase.rpc('chess_find_random_opponent', {
+    p_player_id: playerId,
+    p_display_name: displayName.trim().slice(0, 20) || 'Player',
+  });
+  if (error) throw error;
+  const result = data as RandomMatchmakingResult;
+  if (result?.status === 'matched' && result.room && result.my_color) return result;
+  return { status: 'waiting' };
+}
+
+export async function cancelRandomMatchmaking(playerId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const { error } = await supabase.rpc('chess_cancel_random_matchmaking', { p_player_id: playerId });
+  if (error) throw error;
+}
+
 export async function fetchLeaderboard(limit: number = 20): Promise<PlayerStatsRecord[]> {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in Vercel.');
