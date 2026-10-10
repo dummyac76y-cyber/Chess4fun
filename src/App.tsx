@@ -13,7 +13,7 @@ import { GameMenu } from './components/GameMenu';
 import { TimeControlSelect } from './components/TimeControlSelect';
 import { DifficultySelect } from './components/DifficultySelect';
 import { RoomGame } from './components/RoomGame';
-import { createPrivateRoom, joinPrivateRoom, PrivateRoom } from './lib/supabase';
+import { createPrivateRoom, ensureGuestPlayer, getOrCreatePlayerId, setPlayerName, upsertPlayerStats, joinPrivateRoom, PrivateRoom } from './lib/supabase';
 import { classifyMoveQuality, findBestMove } from './utils/chessBot';
 import { playSound } from './utils/sound';
 import { useGameClock } from './hooks/useGameClock';
@@ -134,10 +134,33 @@ export default function App() {
   const gameOverProcessedRef = useRef(false);
   const statsDirtyRef = useRef(false);
 
-  // Persist stats / settings.
+  // Create a lightweight guest profile row without email/password authentication.
+  // This is convenient for casual play, but is not a secure identity system.
   useEffect(() => {
-    if (statsDirtyRef.current) localStorage.setItem('chessStats', JSON.stringify(stats));
-  }, [stats]);
+    const playerId = getOrCreatePlayerId();
+    setPlayerName(settings.playerName);
+    void ensureGuestPlayer(playerId, settings.playerName).catch((error) => {
+      console.warn('[Guest profile] Cloud profile could not be saved:', error);
+    });
+  }, [settings.playerName]);
+
+  // Persist stats locally first, then sync them to the public leaderboard.
+  useEffect(() => {
+    if (!statsDirtyRef.current) return;
+    localStorage.setItem('chessStats', JSON.stringify(stats));
+    const playerId = getOrCreatePlayerId();
+    void upsertPlayerStats(playerId, settings.playerName, {
+      points: stats.points,
+      wins: stats.wins,
+      losses: stats.losses,
+      draws: stats.draws,
+      games_played: stats.gamesPlayed,
+      current_streak: stats.currentStreak,
+      best_streak: stats.bestStreak,
+    }).catch((error) => {
+      console.warn('[Player stats] Cloud sync failed; local stats remain saved:', error);
+    });
+  }, [stats, settings.playerName]);
   useEffect(() => {
     localStorage.setItem('chessSettings', JSON.stringify(settings));
   }, [settings]);
@@ -628,7 +651,7 @@ export default function App() {
 
   const resetStats = useCallback(() => {
     if (confirm('Are you sure you want to reset all stats?')) {
-      statsDirtyRef.current = false;
+      statsDirtyRef.current = true;
       setStats(DEFAULT_STATS);
       localStorage.setItem('chessStats', JSON.stringify(DEFAULT_STATS));
     }
