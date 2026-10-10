@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Chess, Move } from 'chess.js';
 import { ArrowRight, BrainCircuit, RefreshCw, TrendingUp } from 'lucide-react';
 import { evaluateBoard, findBestMove } from '../utils/chessBot';
