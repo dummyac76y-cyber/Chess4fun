@@ -5,7 +5,7 @@
  */
 export function LiquidGlassBackground() {
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none bg-[#0a0a0b]">
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#0a0a0b]">
       <div
         className="absolute inset-0"
         style={{
