@@ -903,6 +903,7 @@ export default function App() {
                 whiteTime={clock.whiteTime}
                 blackTime={clock.blackTime}
                 clockRunning={clock.running}
+                suggestedMove={suggestedMove}
               />
 
               <Controls
@@ -929,6 +930,7 @@ export default function App() {
                 game={game}
                 analysis={analysis}
                 enabled={settings.showMoveQuality}
+                onBestMove={setSuggestedMove}
               />
             </div>
           </div>
