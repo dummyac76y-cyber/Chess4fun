@@ -205,3 +205,44 @@ export function findBestMove(fen: string, difficulty: Difficulty): Move | null {
 
   return bestMoves[Math.floor(Math.random() * bestMoves.length)] ?? moves[0];
 }
+
+
+export type MoveQuality = 'Excellent' | 'Good' | 'Inaccuracy' | 'Mistake' | 'Blunder';
+
+/**
+ * Lightweight one-ply move review. This is a local estimate, not Stockfish-grade
+ * centipawn-loss analysis: it compares the played move with the best static
+ * evaluation among the legal alternatives in the position before the move.
+ */
+export function classifyMoveQuality(
+  beforeFen: string,
+  from: string,
+  to: string,
+  promotion?: string,
+): { label: MoveQuality; lossCp: number } {
+  const before = new Chess(beforeFen);
+  const mover = before.turn();
+  const legalMoves = before.moves({ verbose: true }) as Move[];
+  let bestScore = -Infinity;
+  let playedScore: number | null = null;
+
+  for (const candidate of legalMoves) {
+    before.move(candidate);
+    const whiteScore = evaluateBoard(before);
+    const moverScore = mover === 'w' ? whiteScore : -whiteScore;
+    if (moverScore > bestScore) bestScore = moverScore;
+    if (candidate.from === from && candidate.to === to &&
+        (candidate.promotion || undefined) === (promotion || undefined)) {
+      playedScore = moverScore;
+    }
+    before.undo();
+  }
+
+  if (playedScore === null || !Number.isFinite(bestScore)) return { label: 'Good', lossCp: 0 };
+  const lossCp = Math.max(0, Math.round(bestScore - playedScore));
+  if (lossCp <= 15) return { label: 'Excellent', lossCp };
+  if (lossCp <= 45) return { label: 'Good', lossCp };
+  if (lossCp <= 100) return { label: 'Inaccuracy', lossCp };
+  if (lossCp <= 200) return { label: 'Mistake', lossCp };
+  return { label: 'Blunder', lossCp };
+}
