@@ -35,6 +35,25 @@ export function generateAccessCode(): string {
   return code;
 }
 
+export interface GuestPlayerRecord {
+  player_id: string;
+  display_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function ensureGuestPlayer(playerId: string, displayName: string): Promise<GuestPlayerRecord | null> {
+  if (!isSupabaseConfigured()) return null;
+  const cleanName = displayName.trim().slice(0, 20) || 'Player';
+  const { data, error } = await supabase
+    .from('chess_players')
+    .upsert({ player_id: playerId, display_name: cleanName, updated_at: new Date().toISOString() }, { onConflict: 'player_id' })
+    .select('player_id, display_name, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return data as GuestPlayerRecord;
+}
+
 export interface PlayerStatsRecord {
   id: string;
   player_id: string;
@@ -93,56 +112,33 @@ export async function upsertPlayerStats(
     best_streak: number;
   }
 ): Promise<PlayerStatsRecord | null> {
-  const { data: existing } = await supabase
+  if (!isSupabaseConfigured()) return null;
+  await ensureGuestPlayer(playerId, displayName);
+  const { data, error } = await supabase
     .from('chess_player_stats')
-    .select('id')
-    .eq('player_id', playerId)
-    .maybeSingle();
-
-  if (existing) {
-    const { data, error } = await supabase
-      .from('chess_player_stats')
-      .update({
-        display_name: displayName,
-        points: stats.points,
-        wins: stats.wins,
-        losses: stats.losses,
-        draws: stats.draws,
-        games_played: stats.games_played,
-        current_streak: stats.current_streak,
-        best_streak: stats.best_streak,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('player_id', playerId)
-      .select()
-      .single();
-    if (error) console.error('[Supabase Stats Error] Failed to update player stats:', error);
-    return data as PlayerStatsRecord | null;
-  } else {
-    const { data, error } = await supabase
-      .from('chess_player_stats')
-      .insert({
-        player_id: playerId,
-        display_name: displayName,
-        ...stats,
-      })
-      .select()
-      .single();
-    if (error) console.error('[Supabase Stats Error] Failed to insert player stats:', error);
-    return data as PlayerStatsRecord | null;
-  }
+    .upsert({
+      player_id: playerId,
+      display_name: displayName.trim().slice(0, 20) || 'Player',
+      ...stats,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'player_id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as PlayerStatsRecord;
 }
 
 export async function fetchLeaderboard(limit: number = 20): Promise<PlayerStatsRecord[]> {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in Vercel.');
+  }
   const { data, error } = await supabase
     .from('chess_player_stats')
     .select('*')
     .order('points', { ascending: false })
+    .order('wins', { ascending: false })
     .limit(limit);
-  if (error) {
-    console.error('[Supabase Leaderboard Error] Failed to fetch leaderboard:', error);
-    return [];
-  }
+  if (error) throw error;
   return (data as PlayerStatsRecord[]) || [];
 }
 
