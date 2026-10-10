@@ -14,7 +14,7 @@ import { TimeControlSelect } from './components/TimeControlSelect';
 import { DifficultySelect } from './components/DifficultySelect';
 import { RoomGame } from './components/RoomGame';
 import { createPrivateRoom, joinPrivateRoom, PrivateRoom } from './lib/supabase';
-import { findBestMove } from './utils/chessBot';
+import { classifyMoveQuality, findBestMove } from './utils/chessBot';
 import { playSound } from './utils/sound';
 import { useGameClock } from './hooks/useGameClock';
 import {
@@ -95,7 +95,7 @@ export default function App() {
     return DEFAULT_STATS;
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [analysis, setAnalysis] = useState<{ score: number; lastMove: string | null } | null>(null);
+  const [analysis, setAnalysis] = useState<{ score: number; lastMove: string | null; quality?: string; qualityLoss?: number } | null>(null);
   const [suggestedMove, setSuggestedMove] = useState<{ from: string; to: string } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null);
@@ -482,6 +482,7 @@ export default function App() {
       }
     }
 
+    const beforeFen = g.fen();
     let move = null;
     try {
       move = g.move({ from, to, promotion: promotion ?? 'q' });
@@ -492,6 +493,10 @@ export default function App() {
 
     if (pendingPromotion) setPendingPromotion(null);
     afterMoveEffects(move.san, !!move.captured, g);
+    if (gameMode !== 'online') {
+      const quality = classifyMoveQuality(beforeFen, from, to, promotion ?? 'q');
+      setAnalysis(prev => ({ score: prev?.score ?? 0, lastMove: move!.san, quality: quality.label, qualityLoss: quality.lossCp }));
+    }
     rerender();
 
     if (gameMode === 'online') {
