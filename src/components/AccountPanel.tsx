@@ -90,6 +90,8 @@ export function AccountPanel() {
       const lower = text.toLowerCase();
       if (lower.includes('fetch') || lower.includes('failed to fetch')) {
         setError('Could not reach Supabase. Check that Vercel has the correct VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY), then redeploy.');
+      } else if (lower.includes('email logins are disabled') || lower.includes('email signups are disabled') || lower.includes('email provider is disabled')) {
+        setError('You do not need to enter a real email. Chess4fun uses a hidden app-generated login ID behind the scenes, so Supabase’s Email provider must be enabled internally. In Supabase → Authentication → Sign In / Providers → Email, enable the provider and turn Confirm email OFF. The Chess4fun form will still ask only for username and password.');
       } else if (lower.includes('email not confirmed')) {
         setError('This account is waiting for email confirmation. Username-only accounts require Email confirmation to be disabled in Supabase Dashboard → Authentication → Providers → Email.');
       } else if (lower.includes('user already registered')) {
