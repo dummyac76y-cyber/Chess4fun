@@ -83,7 +83,7 @@ begin
 
   v_my_color := case when random() < 0.5 then 'white' else 'black' end;
   loop
-    v_code := upper(substr(encode(gen_random_bytes(8), 'hex'), 1, 6));
+    v_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
     begin
       insert into public.chess_private_rooms (access_code, status, host_color, fen, move_history)
       values (v_code, 'active', case when v_my_color = 'white' then 'black' else 'white' end,
