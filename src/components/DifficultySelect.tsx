@@ -1,4 +1,5 @@
 import { Difficulty } from '../App';
+import { Sprout, Gauge, Flame } from 'lucide-react';
 
 interface DifficultySelectProps {
   onSelect: (difficulty: Difficulty) => void;
@@ -7,9 +8,9 @@ interface DifficultySelectProps {
 
 export function DifficultySelect({ onSelect, onBack }: DifficultySelectProps) {
   const difficulties = [
-    { value: 'easy' as Difficulty, label: 'Easy', description: 'Perfect for beginners', emoji: '🌱' },
-    { value: 'medium' as Difficulty, label: 'Medium', description: 'Balanced challenge', emoji: '⚡' },
-    { value: 'hard' as Difficulty, label: 'Hard', description: 'For experienced players', emoji: '🔥' },
+    { value: 'easy' as Difficulty, label: 'Easy', description: 'Perfect for beginners', Icon: Sprout },
+    { value: 'medium' as Difficulty, label: 'Medium', description: 'Balanced challenge', Icon: Gauge },
+    { value: 'hard' as Difficulty, label: 'Hard', description: 'For experienced players', Icon: Flame },
   ];
 
   return (
@@ -29,7 +30,7 @@ export function DifficultySelect({ onSelect, onBack }: DifficultySelectProps) {
                   className="w-full py-3 px-4 rounded-lg border border-zinc-800 text-zinc-200 hover:bg-zinc-800/60 transition-colors text-left"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="text-3xl">{diff.emoji}</div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-zinc-700 bg-zinc-900 text-lime-300"><diff.Icon size={21} strokeWidth={1.8} /></div>
                     <div>
                       <div className="font-medium text-[15px]">{diff.label}</div>
                       <div className="text-zinc-500 text-sm">{diff.description}</div>
