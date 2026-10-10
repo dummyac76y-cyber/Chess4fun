@@ -12,9 +12,10 @@ interface RoomGameProps {
   myColor: 'white' | 'black';
   settings: GameSettings;
   onLeave: () => void;
+  onResult: (outcome: 'win' | 'loss' | 'draw') => void;
 }
 
-export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameProps) {
+export function RoomGame({ room, isHost, myColor, settings, onLeave, onResult }: RoomGameProps) {
   const [game, setGame] = useState(() => new Chess(room.fen));
   const [moveHistory, setMoveHistory] = useState<string[]>(
     room.move_history ? room.move_history.split(',') : []
@@ -23,6 +24,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
   const [opponentLeft, setOpponentLeft] = useState(false);
   const isMyTurn = game.turn() === (myColor === 'white' ? 'w' : 'b');
   const lastFenRef = useRef(room.fen);
+  const resultRecordedRef = useRef(false);
 
   // Initialize from room data
   useEffect(() => {
@@ -36,6 +38,16 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
     }
     lastFenRef.current = room.fen;
   }, [room.id]);
+
+  // Record each completed online match once on both clients, including random matches.
+  useEffect(() => {
+    if (roomStatus !== 'finished' || !game.isGameOver() || resultRecordedRef.current) return;
+    resultRecordedRef.current = true;
+    const outcome: 'win' | 'loss' | 'draw' = game.isDraw()
+      ? 'draw'
+      : (game.turn() === 'w' ? 'black' : 'white') === myColor ? 'win' : 'loss';
+    onResult(outcome);
+  }, [game, roomStatus, myColor, onResult]);
 
   // Realtime subscription & BroadcastChannel setup for move updates
   useEffect(() => {
@@ -165,6 +177,7 @@ export function RoomGame({ room, isHost, myColor, settings, onLeave }: RoomGameP
       setMoveHistory(newHistory);
 
       const finalStatus = gameCopy.isGameOver() ? 'finished' : 'active';
+      if (finalStatus === 'finished') setRoomStatus('finished');
 
       updatePrivateRoom(room.id, {
         fen: newFen,
