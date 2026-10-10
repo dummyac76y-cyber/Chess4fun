@@ -3,21 +3,15 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
-  // The Supabase Vercel integration currently provides NEXT_PUBLIC_/SUPABASE_*
-  // variables. Map only the public URL and public anon/publishable key into
-  // Vite's client-side names so existing integration settings work without
-  // exposing database passwords or service-role keys.
   const env = loadEnv(mode, process.cwd(), "");
+  // Use explicit VITE overrides when provided. Otherwise default to the
+  // Supabase project provisioned for Chess4fun; never inject server secrets.
   const supabaseUrl =
-    env.VITE_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || "";
+    env.VITE_SUPABASE_URL || "https://wzmdohwphkokbbnlpkax.supabase.co";
   const supabasePublicKey =
     env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     env.VITE_SUPABASE_ANON_KEY ||
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    env.SUPABASE_PUBLISHABLE_KEY ||
-    env.SUPABASE_ANON_KEY ||
-    "";
+    "sb_publishable_QJKadycXocSUz7s55dY2bQ_VOTVJz1Y";
 
   return {
     plugins: [react(), tailwindcss()],
