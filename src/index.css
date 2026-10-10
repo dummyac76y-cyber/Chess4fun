@@ -108,3 +108,52 @@ html,body{margin:0;padding:0;min-height:100%;background:#101310;overscroll-behav
 .stats-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;color:#b4c0a9;font-size:10px}.stats-footer strong{color:#f0f5e9}.stats-footer button{border:1px solid rgba(255,145,132,.25);background:rgba(231,127,118,.07);color:#ffb1a8;border-radius:10px;padding:10px 13px;font-size:10px;cursor:pointer}.stats-footer button:hover{background:rgba(231,127,118,.14)}
 @media(max-width:850px){.stats-metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.stats-lower-grid{grid-template-columns:1fr}.stats-win-card{padding:18px}}
 @media(max-width:560px){.stats-screen{padding:14px 12px 28px}.stats-topbar{padding-bottom:17px}.stats-heading{align-items:flex-start;margin:26px 0 19px}.stats-heading p{max-width:250px}.stats-rank-badge{padding:10px}.stats-overview{grid-template-columns:1fr}.stats-score-card{min-height:125px}.stats-win-card{gap:18px}.win-ring{width:98px;height:98px;flex-basis:98px}.stats-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stats-metric-grid article{padding:14px}.stats-chart-card{padding:18px 15px}.stats-brand{font-size:10px}}
+
+
+/* In-game engine analysis, readable evaluation chart and solid 3D pieces */
+.chess-piece-glyph{position:relative;transform:translateY(-2%) perspective(180px) rotateX(3deg);filter:drop-shadow(0 2px 0 rgba(0,0,0,.55)) drop-shadow(0 5px 3px rgba(0,0,0,.24));transition:transform .18s ease,filter .18s ease}
+.chess-piece-white{color:#fff9e8;-webkit-text-stroke:.65px #687064;text-shadow:0 1px 0 #c5cbb9,0 2px 0 #737d6e,0 4px 2px rgba(0,0,0,.28)}
+.chess-piece-black{color:#242a25;-webkit-text-stroke:.8px #080b08;text-shadow:0 1px 0 #72786e,0 3px 0 #101510,0 5px 3px rgba(0,0,0,.42)}
+.chess-board-piece{position:relative;transform-style:preserve-3d;transition:transform .18s ease,filter .18s ease}
+.chess-board-piece:hover{transform:translateY(-2px) scale(1.035);filter:drop-shadow(0 5px 3px rgba(0,0,0,.25))}
+.chess-piece-arrive{animation:chess-piece-drop .22s cubic-bezier(.2,.75,.25,1)}
+@keyframes chess-piece-drop{0%{transform:translateY(-8px) scale(1.06);opacity:.72}100%{transform:translateY(0) scale(1);opacity:1}}
+.analysis-panel{padding:17px;border:1px solid rgba(224,235,214,.11);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018));box-shadow:0 14px 36px rgba(0,0,0,.12);color:#f1f4ec;display:grid;gap:13px}
+.analysis-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.analysis-heading h3{font-size:15px;font-weight:750;letter-spacing:-.02em;margin:4px 0 0;color:#f4f6f0}
+.analysis-kicker{font-size:9px;font-weight:800;letter-spacing:.18em;color:#a9c978}
+.analysis-icon{color:#c7f36b}
+.analysis-score-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.analysis-score-row strong{font-size:27px;line-height:1;font-variant-numeric:tabular-nums}
+.analysis-score-row span{font-size:11px;color:#d2dacb}
+.analysis-advantage-track{height:12px;position:relative;overflow:hidden;border-radius:99px;background:#20251f;border:1px solid rgba(255,255,255,.13)}
+.analysis-white-advantage{height:100%;border-radius:99px;background:linear-gradient(90deg,#d6ddc8,#fffef5);transition:width .4s ease;box-shadow:0 0 14px rgba(255,255,255,.14)}
+.analysis-center-mark{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#c7f36b;opacity:.95}
+.analysis-scale{display:flex;justify-content:space-between;color:#a7b1a1;font-size:9px}
+.analysis-best-button{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 12px;border-radius:11px;background:linear-gradient(100deg,#c7f36b,#d8f6a2);color:#1a2510;font-size:12px;font-weight:800;border:1px solid rgba(223,255,184,.35);transition:transform .16s ease,filter .16s ease}
+.analysis-best-button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.04)}
+.analysis-best-button:disabled{opacity:.7;cursor:wait}
+.analysis-recommendation{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid rgba(135,199,255,.24);border-radius:12px;background:rgba(53,126,181,.1);min-width:0}
+.analysis-recommendation-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(94,178,255,.14);color:#8dceff;flex:0 0 auto}
+.analysis-recommendation-copy{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.analysis-recommendation-copy>span{font-size:8px;letter-spacing:.14em;font-weight:800;color:#93cfff}
+.analysis-recommendation-copy strong{font-size:17px;color:#f1f8ff}
+.analysis-recommendation-copy small{font-size:10px;color:#b3c6d4}
+.analysis-clear-button{align-self:flex-start;color:#a9c0d1;font-size:22px;line-height:1;padding:0 3px}
+.analysis-candidates{display:grid;gap:9px;padding-top:2px}
+.analysis-subheading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.analysis-subheading span{font-size:11px;font-weight:750;color:#e5ebdf}
+.analysis-subheading small{font-size:9px;color:#9aa696}
+.analysis-candidate{display:grid;grid-template-columns:18px 42px minmax(35px,1fr) 35px;gap:8px;align-items:center;font-size:10px}
+.analysis-candidate-rank{color:#8d9986;font-variant-numeric:tabular-nums}
+.analysis-candidate strong{color:#edf2e8;font-size:11px}
+.analysis-candidate-track{height:6px;border-radius:99px;overflow:hidden;background:#252b24}
+.analysis-candidate-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#7d9d51,#c7f36b)}
+.analysis-candidate small{text-align:right;color:#b7c4ad;font-variant-numeric:tabular-nums}
+.analysis-last-move{font-size:10px;color:#aab5a2;margin:0}
+.analysis-last-move strong{color:#e5eddc}
+.analysis-footnote,.analysis-muted{font-size:10px;line-height:1.55;color:#8f9a89;margin:0}
+.analysis-title{font-size:13px;font-weight:750;color:#f1f4ec}
+.analysis-spin{animation:spin 1s linear infinite}
+@media(max-width:640px){.analysis-panel{padding:14px}.analysis-score-row strong{font-size:24px}.analysis-candidate{grid-template-columns:16px 36px minmax(25px,1fr) 32px;gap:6px}.analysis-subheading small{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.chess-piece-arrive,.chess-board-piece,.chess-piece-glyph,.analysis-white-advantage{animation:none!important;transition:none!important}}
